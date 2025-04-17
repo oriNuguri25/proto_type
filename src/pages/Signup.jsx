@@ -1,10 +1,86 @@
-import React from "react";
+import React, { useState } from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 const Signup = () => {
+  const navigate = useNavigate();
+  const [formData, setFormData] = useState({
+    email: "",
+    name: "",
+    password: "",
+    passwordConfirm: "",
+    nickname: "",
+  });
+  const [error, setError] = useState("");
+
+  const handleChange = (e) => {
+    const { id, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [id]: value,
+    }));
+  };
+
+  const handleSubmit = async () => {
+    setError("");
+
+    // 기본적인 유효성 검사
+    if (
+      !formData.email ||
+      !formData.name ||
+      !formData.password ||
+      !formData.passwordConfirm ||
+      !formData.nickname
+    ) {
+      setError("모든 필드를 입력해주세요.");
+      return;
+    }
+
+    // 이메일 도메인 검사
+    if (!formData.email.endsWith("@gachon.ac.kr")) {
+      setError("가천대학교 이메일(@gachon.ac.kr)만 사용 가능합니다.");
+      return;
+    }
+
+    // 비밀번호 길이 검사
+    if (formData.password.length < 6) {
+      setError("비밀번호는 최소 6글자 이상이어야 합니다.");
+      return;
+    }
+
+    if (formData.password !== formData.passwordConfirm) {
+      setError("비밀번호가 일치하지 않습니다.");
+      return;
+    }
+
+    try {
+      // API 호출 로직
+      const response = await fetch("/api/send-link", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: formData.email,
+          name: formData.name,
+          password: formData.password,
+          nickname: formData.nickname,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("회원가입 처리 중 오류가 발생했습니다.");
+      }
+
+      // 회원가입 대기 페이지로 이동하고 뒤로가기 방지
+      navigate("/signup/wait", { replace: true });
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gradient-bg p-4">
       <div className="w-full max-w-md space-y-8">
@@ -21,6 +97,9 @@ const Signup = () => {
         {/* signup form */}
         <div className="rounded-lg border bg-white p-6 shadow-sm">
           <h2 className="mb-4 text-center text-xl font-semibold">Đăng ký</h2>
+          {error && (
+            <div className="mb-4 text-red-500 text-sm text-center">{error}</div>
+          )}
           <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email trường học</Label>
@@ -30,31 +109,22 @@ const Signup = () => {
                   type="email"
                   placeholder="email@gachon.ac.kr"
                   className="flex-1"
+                  value={formData.email}
+                  onChange={handleChange}
                 />
-                <Button
-                  variant="outline"
-                  className="whitespace-nowrap border-blue-200 text-blue-600 hover:bg-blue-50 hover:text-blue-700"
-                >
-                  Nhận mã
-                  <br /> xác minh
-                </Button>
               </div>
-            </div>
-
-            {/* 인증번호 입력 */}
-            <div className="space-y-2">
-              <Label htmlFor="verification-code">Mã xác minh</Label>
-              <Input
-                id="verification-code"
-                type="text"
-                placeholder="Nhập mã 6 số"
-              />
             </div>
 
             {/* 이름 입력 */}
             <div className="space-y-2">
               <Label htmlFor="name">Tên</Label>
-              <Input id="name" type="text" placeholder="Nhập tên" />
+              <Input
+                id="name"
+                type="text"
+                placeholder="Nhập tên"
+                value={formData.name}
+                onChange={handleChange}
+              />
             </div>
 
             {/* 비밀번호 입력 */}
@@ -64,15 +134,22 @@ const Signup = () => {
                 id="password"
                 type="password"
                 placeholder="Nhập mật khẩu"
+                value={formData.password}
+                onChange={handleChange}
               />
+              <p className="text-xs text-gray-500">
+                비밀번호는 최소 6글자 이상이어야 합니다.
+              </p>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password-confirm">Xác nhận mật khẩu</Label>
+              <Label htmlFor="passwordConfirm">Xác nhận mật khẩu</Label>
               <Input
-                id="password-confirm"
+                id="passwordConfirm"
                 type="password"
                 placeholder="Vui lòng nhập lại mật khẩu"
+                value={formData.passwordConfirm}
+                onChange={handleChange}
               />
             </div>
 
@@ -83,10 +160,14 @@ const Signup = () => {
                 id="nickname"
                 type="text"
                 placeholder="Vui lòng nhập biệt danh"
+                value={formData.nickname}
+                onChange={handleChange}
               />
             </div>
 
-            <Button className="w-full btn-primary">Hoàn thành đăng ký</Button>
+            <Button className="w-full btn-primary" onClick={handleSubmit}>
+              Hoàn thành đăng ký
+            </Button>
 
             <div className="mt-4 text-center text-sm">
               <span className="text-muted-foreground">
