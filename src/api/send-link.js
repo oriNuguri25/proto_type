@@ -59,21 +59,23 @@ export default async function handler(req, res) {
       expires_at: expiresAt.toISOString(),
     });
 
-    // 절대 URL 생성
-    const verificationUrl = new URL("/api/verify", process.env.BASE_URL);
-    verificationUrl.searchParams.append("token", token);
-    const link = verificationUrl.toString();
+    const link = `${process.env.BASE_URL}/api/verify?token=${token}`;
 
-    const emailTemplate = `
-      <div style="max-width: 600px; margin: 0 auto; padding: 20px; font-family: Arial, sans-serif;">
-        <h2 style="color: #333; text-align: center;">이메일 인증</h2>
+    const emailHtml = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #333; text-align: center;">회원가입 인증</h2>
         <p style="color: #666;">안녕하세요 ${name}님,</p>
-        <p style="color: #666;">아래 링크를 클릭하여 회원가입을 완료해주세요:</p>
+        <p style="color: #666;">아래 버튼을 클릭하여 회원가입을 완료해주세요.</p>
         <div style="text-align: center; margin: 30px 0;">
-          <a href="${link}" style="background-color: #4F46E5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">이메일 인증하기</a>
+          <a href="${link}" 
+             style="background-color: #4F46E5; color: white; padding: 12px 24px; 
+                    text-decoration: none; border-radius: 5px; display: inline-block;">
+            이메일 인증하기
+          </a>
         </div>
-        <p style="color: #666; font-size: 14px;">링크는 30분 동안 유효합니다.</p>
-        <p style="color: #666; font-size: 14px;">버튼이 작동하지 않는 경우 아래 링크를 복사하여 브라우저에 붙여넣어주세요:</p>
+        <p style="color: #666; font-size: 14px;">이 링크는 30분 동안만 유효합니다.</p>
+        <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+        <p style="color: #666; font-size: 14px;">버튼이 작동하지 않는 경우, 아래 링크를 복사하여 브라우저에 붙여넣어주세요:</p>
         <p style="color: #666; font-size: 14px; word-break: break-all;">${link}</p>
       </div>
     `;
@@ -82,10 +84,10 @@ export default async function handler(req, res) {
       to: email,
       from: process.env.FROM_EMAIL,
       subject: "Jeogi - 이메일 인증",
-      html: emailTemplate,
+      html: emailHtml,
     });
 
-    return res.status(200).json({ message: "메일을 보냈어요!" });
+    return res.status(200).json({ message: "인증 메일을 발송했습니다." });
   } catch (error) {
     console.error("Error:", error);
     return res.status(500).json({

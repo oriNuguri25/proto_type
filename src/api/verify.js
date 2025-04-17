@@ -16,14 +16,12 @@ export default async function handler(req, res) {
     .single();
 
   if (!user || error) {
-    return res.redirect(
-      `${process.env.FRONTEND_URL}/login?error=invalid-token`
-    );
+    return res.redirect(`${process.env.BASE_URL}/login?error=invalid-token`);
   }
 
   // 토큰 만료 확인
   if (new Date(user.expires_at) < new Date()) {
-    return res.redirect(`${process.env.FRONTEND_URL}/signup/fail`);
+    return res.redirect(`${process.env.BASE_URL}/signup/fail`);
   }
 
   try {
@@ -39,9 +37,9 @@ export default async function handler(req, res) {
     await supabase.from("pending_users").delete().eq("email", user.email);
 
     // 성공 시 로그인 페이지로 리다이렉션
-    return res.redirect(`${process.env.FRONTEND_URL}/login?success=true`);
+    return res.redirect(`${process.env.BASE_URL}/login?success=true`);
   } catch (error) {
     console.error("Error during verification:", error);
-    return res.redirect(`${process.env.FRONTEND_URL}/login?error=server-error`);
+    return res.redirect(`${process.env.BASE_URL}/login?error=server-error`);
   }
 }
