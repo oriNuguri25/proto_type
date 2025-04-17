@@ -57,11 +57,14 @@ const Signup = () => {
 
     try {
       // API 호출 로직
-      const response = await fetch("/api/send-link", {
+      const response = await fetch("https://jeogi.vercel.app/api/send-link", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Origin: "http://localhost:5173",
         },
+        mode: "cors",
+        credentials: "include",
         body: JSON.stringify({
           email: formData.email,
           name: formData.name,
@@ -70,10 +73,15 @@ const Signup = () => {
         }),
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        throw new Error("회원가입 처리 중 오류가 발생했습니다.");
+        throw new Error(
+          data.message || "회원가입 처리 중 오류가 발생했습니다."
+        );
       }
 
+      console.log("회원가입 요청 성공:", data);
       // 회원가입 대기 페이지로 이동하고 뒤로가기 방지
       navigate("/signup/wait", { replace: true });
     } catch (err) {

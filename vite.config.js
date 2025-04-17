@@ -14,8 +14,9 @@ export default defineConfig({
   server: {
     proxy: {
       "/api": {
-        target: "http://localhost:3000", // API 서버 주소
+        target: "https://jeogi.vercel.app",
         changeOrigin: true,
+        secure: false,
       },
     },
   },
