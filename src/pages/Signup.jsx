@@ -82,10 +82,12 @@ const Signup = () => {
       }
 
       console.log("회원가입 요청 성공:", data);
-      // 회원가입 대기 페이지로 이동하고 뒤로가기 방지
+
+      // 회원가입 대기 페이지로 이동
       navigate("/signup/wait", { replace: true });
     } catch (err) {
       setError(err.message);
+      console.error("회원가입 에러:", err);
     }
   };
 
