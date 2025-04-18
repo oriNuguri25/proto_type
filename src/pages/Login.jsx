@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@supabase/supabase-js";
 import bcrypt from "bcryptjs";
+import { setToken } from "@/utils/auth";
 
 const supabase = createClient(
   import.meta.env.VITE_SUPABASE_URL,
@@ -65,33 +66,29 @@ const Login = () => {
     setSuccessMessage("");
   };
 
-  const handleSubmit = async () => {
-    if (isLoading) return; // 이미 처리 중이면 중복 요청 방지
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setFormErrors({ email: "", password: "" });
+    setSuccessMessage("");
 
     try {
-      setIsLoading(true); // 로딩 시작
-      // 초기화
-      setFormErrors({ email: "", password: "" });
-      setSuccessMessage("");
-
-      // 이메일 형식 검사
+      // 이메일 형식 검증
       if (!formData.email.endsWith("@gachon.ac.kr")) {
         setFormErrors((prev) => ({
           ...prev,
-          email: "Vui lòng kiểm tra email của bạn.",
+          email: "가천대학교 이메일(@gachon.ac.kr)로만 로그인이 가능합니다.",
         }));
         return;
       }
 
-      // profiles 테이블에서 이메일 확인
-      const { data: profileData, error: profileError } = await supabase
+      // 프로필 조회
+      const { data: profile, error: profileError } = await supabase
         .from("profiles")
-        .select("password")
+        .select("*")
         .eq("email", formData.email)
-        .maybeSingle();
+        .single();
 
-      if (profileError) {
-        console.error("프로필 조회 중 오류:", profileError);
+      if (profileError || !profile) {
         setFormErrors((prev) => ({
           ...prev,
           email: "Đã xảy ra lỗi. Vui lòng thử lại sau.",
@@ -99,21 +96,11 @@ const Login = () => {
         return;
       }
 
-      // 이메일이 존재하지 않는 경우
-      if (!profileData) {
-        setFormErrors((prev) => ({
-          ...prev,
-          email: "Email không tồn tại.",
-        }));
-        return;
-      }
-
-      // 비밀번호 확인 (bcrypt compare 사용)
+      // 비밀번호 검증
       const isPasswordValid = await bcrypt.compare(
         formData.password,
-        profileData.password
+        profile.password
       );
-
       if (!isPasswordValid) {
         setFormErrors((prev) => ({
           ...prev,
@@ -122,40 +109,39 @@ const Login = () => {
         return;
       }
 
-      // 로그인 성공 후 토큰 발급 요청
-      const API_URL = import.meta.env.DEV
-        ? "/api/login-token"
-        : `${import.meta.env.VITE_BASE_URL}/api/login-token`;
+      // JWT 토큰 요청
+      const apiUrl = import.meta.env.DEV
+        ? "http://localhost:5173"
+        : "https://jeogi.vercel.app";
 
-      const tokenRes = await fetch(API_URL, {
+      const response = await fetch(`${apiUrl}/api/login-token`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ email: formData.email }),
+        credentials: "include",
       });
 
-      if (!tokenRes.ok) {
-        throw new Error(`HTTP error! status: ${tokenRes.status}`);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(
+          errorData.message || "로그인 처리 중 오류가 발생했습니다."
+        );
       }
 
-      const tokenData = await tokenRes.json();
+      const { token } = await response.json();
 
-      if (tokenData.token) {
-        localStorage.setItem("token", tokenData.token);
-        setSuccessMessage("✅ Đăng nhập thành công!");
-        navigate("/main", { replace: true });
-      } else {
-        throw new Error("토큰 발급 실패");
-      }
-    } catch (err) {
-      console.error("로그인 중 오류:", err);
+      // 토큰 저장 및 리다이렉트
+      setToken(token);
+      navigate(`/main?${token}`, { replace: true });
+      setSuccessMessage("로그인 성공!");
+    } catch (error) {
+      console.error("로그인 중 오류:", error);
       setFormErrors({
-        email: "Đã xảy ra lỗi. Vui lòng thử lại sau.",
+        email: error.message || "Đã xảy ra lỗi. Vui lòng thử lại sau.",
         password: "",
       });
-    } finally {
-      setIsLoading(false); // 로딩 종료
     }
   };
 

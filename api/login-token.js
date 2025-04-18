@@ -34,51 +34,57 @@ const runMiddleware = (req, res, fn) => {
 };
 
 export default async function handler(req, res) {
+  // OPTIONS 요청 처리
+  if (req.method === "OPTIONS") {
+    res.status(200).end();
+    return;
+  }
+
+  // CORS 미들웨어 실행
   try {
-    // CORS 미들웨어 실행
     await runMiddleware(req, res, corsMiddleware);
+  } catch (error) {
+    console.error("CORS 에러:", error);
+    return res.status(500).json({ message: "CORS 에러가 발생했습니다." });
+  }
 
-    if (req.method === "OPTIONS") {
-      return res.status(200).json({ message: "OK" });
+  // POST 메소드 체크
+  if (req.method !== "POST") {
+    return res.status(405).json({
+      message: "허용되지 않는 메서드입니다.",
+      allowedMethods: ["POST", "OPTIONS"],
+    });
+  }
+
+  const { email } = req.body;
+
+  if (!email) {
+    return res.status(400).json({ message: "이메일이 필요합니다." });
+  }
+
+  try {
+    // profiles 테이블에서 사용자 정보 조회
+    const { data: user, error } = await supabase
+      .from("profiles")
+      .select("id, email")
+      .eq("email", email)
+      .single();
+
+    if (error || !user) {
+      console.error("사용자 정보 조회 오류:", error);
+      return res.status(404).json({ message: "사용자를 찾을 수 없습니다." });
     }
 
-    if (req.method !== "POST") {
-      return res.status(405).json({ message: "허용되지 않는 메서드입니다." });
-    }
+    // JWT 토큰 생성
+    const token = jwt.sign(
+      {
+        id: user.id,
+        email: user.email,
+      },
+      process.env.JWT_SECRET
+    );
 
-    const { email } = req.body;
-
-    if (!email) {
-      return res.status(400).json({ message: "이메일이 필요합니다." });
-    }
-
-    try {
-      // profiles 테이블에서 사용자 정보 조회
-      const { data: user, error } = await supabase
-        .from("profiles")
-        .select("id, email")
-        .eq("email", email)
-        .single();
-
-      if (error || !user) {
-        console.error("사용자 정보 조회 오류:", error);
-        return res.status(404).json({ message: "사용자를 찾을 수 없습니다." });
-      }
-
-      // JWT 토큰에 id와 email 포함
-      const token = jwt.sign(
-        {
-          id: user.id,
-          email: user.email,
-        },
-        process.env.JWT_SECRET
-      );
-
-      return res.status(200).json({ token });
-    } catch (error) {
-      console.error("JWT 생성 오류:", error);
-      return res.status(500).json({ message: "토큰 생성 실패" });
-    }
+    return res.status(200).json({ token });
   } catch (error) {
     console.error("서버 오류:", error);
     return res.status(500).json({ message: "서버 오류가 발생했습니다." });
