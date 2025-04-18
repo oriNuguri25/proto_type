@@ -3,6 +3,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Link, useNavigate } from "react-router-dom";
+import { useValidation } from "@/hooks/useValidation";
 
 const Signup = () => {
   const navigate = useNavigate();
@@ -14,6 +15,15 @@ const Signup = () => {
     nickname: "",
   });
   const [error, setError] = useState("");
+  const {
+    emailError,
+    nicknameError,
+    checkEmailExists,
+    checkNicknameExists,
+    clearEmailError,
+    clearNicknameError,
+    setEmailError,
+  } = useValidation();
 
   const handleChange = (e) => {
     const { id, value } = e.target;
@@ -21,10 +31,51 @@ const Signup = () => {
       ...prev,
       [id]: value,
     }));
+    if (id === "email") {
+      clearEmailError();
+    }
+    if (id === "nickname") {
+      clearNicknameError();
+    }
+  };
+
+  const handleEmailBlur = async (e) => {
+    console.log("이메일 필드 blur 이벤트 발생");
+    const email = e.target.value.trim();
+
+    if (!email) {
+      console.log("이메일이 비어있음");
+      return;
+    }
+
+    if (!email.endsWith("@gachon.ac.kr")) {
+      console.log("가천대 이메일이 아님");
+      setEmailError(
+        "Chỉ có thể sử dụng email của Đại học Gachon (@gachon.ac.kr)."
+      );
+      return;
+    }
+
+    console.log("이메일 중복 체크 호출");
+    await checkEmailExists(email);
+  };
+
+  const handleNicknameBlur = async (e) => {
+    console.log("닉네임 필드 blur 이벤트 발생");
+    const nickname = e.target.value.trim();
+
+    if (!nickname) {
+      console.log("닉네임이 비어있음");
+      return;
+    }
+
+    console.log("닉네임 중복 체크 호출");
+    await checkNicknameExists(nickname);
   };
 
   const handleSubmit = async () => {
     setError("");
+    console.log("회원가입 시도:", formData);
 
     // 기본적인 유효성 검사
     if (
@@ -34,24 +85,40 @@ const Signup = () => {
       !formData.passwordConfirm ||
       !formData.nickname
     ) {
-      setError("모든 필드를 입력해주세요.");
+      setError("Vui lòng điền vào tất cả các trường.");
       return;
     }
 
     // 이메일 도메인 검사
     if (!formData.email.endsWith("@gachon.ac.kr")) {
-      setError("가천대학교 이메일(@gachon.ac.kr)만 사용 가능합니다.");
+      setError("Chỉ có thể sử dụng email của Đại học Gachon (@gachon.ac.kr).");
+      return;
+    }
+
+    // 이메일 중복 체크
+    console.log("최종 이메일 중복 체크");
+    const emailExists = await checkEmailExists(formData.email);
+    if (emailExists) {
+      console.log("중복된 이메일로 인한 제출 중단");
+      return;
+    }
+
+    // 닉네임 중복 체크
+    console.log("최종 닉네임 중복 체크");
+    const nicknameExists = await checkNicknameExists(formData.nickname);
+    if (nicknameExists) {
+      console.log("중복된 닉네임으로 인한 제출 중단");
       return;
     }
 
     // 비밀번호 길이 검사
     if (formData.password.length < 6) {
-      setError("비밀번호는 최소 6글자 이상이어야 합니다.");
+      setError("Mật khẩu phải có ít nhất 6 ký tự.");
       return;
     }
 
     if (formData.password !== formData.passwordConfirm) {
-      setError("비밀번호가 일치하지 않습니다.");
+      setError("Mật khẩu không khớp.");
       return;
     }
 
@@ -77,14 +144,17 @@ const Signup = () => {
 
       if (!response.ok) {
         throw new Error(
-          data.message || "회원가입 처리 중 오류가 발생했습니다."
+          data.message || "Đã xảy ra lỗi trong quá trình đăng ký."
         );
       }
 
       console.log("회원가입 요청 성공:", data);
 
-      // 회원가입 대기 페이지로 이동
-      navigate("/signup/wait", { replace: true });
+      // 회원가입 대기 페이지로 이동 (이메일 정보 포함)
+      navigate("/signup/wait", {
+        replace: true,
+        state: { email: formData.email },
+      });
     } catch (err) {
       setError(err.message);
       console.error("회원가입 에러:", err);
@@ -118,11 +188,15 @@ const Signup = () => {
                   id="email"
                   type="email"
                   placeholder="email@gachon.ac.kr"
-                  className="flex-1"
+                  className={`flex-1 ${emailError ? "border-red-500" : ""}`}
                   value={formData.email}
                   onChange={handleChange}
+                  onBlur={handleEmailBlur}
                 />
               </div>
+              {emailError && (
+                <p className="text-sm text-red-500 mt-1">{emailError}</p>
+              )}
             </div>
 
             {/* 이름 입력 */}
@@ -148,7 +222,7 @@ const Signup = () => {
                 onChange={handleChange}
               />
               <p className="text-xs text-gray-500">
-                비밀번호는 최소 6글자 이상이어야 합니다.
+                Mật khẩu phải có ít nhất 6 ký tự.
               </p>
             </div>
 
@@ -170,9 +244,14 @@ const Signup = () => {
                 id="nickname"
                 type="text"
                 placeholder="Vui lòng nhập biệt danh"
+                className={`flex-1 ${nicknameError ? "border-red-500" : ""}`}
                 value={formData.nickname}
                 onChange={handleChange}
+                onBlur={handleNicknameBlur}
               />
+              {nicknameError && (
+                <p className="text-sm text-red-500 mt-1">{nicknameError}</p>
+              )}
             </div>
 
             <Button className="w-full btn-primary" onClick={handleSubmit}>

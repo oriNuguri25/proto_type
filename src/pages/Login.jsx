@@ -20,7 +20,7 @@ const Login = () => {
     if (success === "true") {
       setMessage({
         type: "success",
-        text: "✅ 회원가입이 완료되었습니다! 로그인해주세요.",
+        text: "✅ Đăng ký thành công! Vui lòng đăng nhập.",
       });
     } else if (error) {
       const errorMessages = {
@@ -30,7 +30,7 @@ const Login = () => {
       };
       setMessage({
         type: "error",
-        text: errorMessages[error] || "❌ 오류가 발생했습니다.",
+        text: errorMessages[error] || "❌ Đã xảy ra lỗi.",
       });
     }
   }, [searchParams]);

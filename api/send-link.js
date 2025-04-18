@@ -63,19 +63,19 @@ export default async function handler(req, res) {
 
     const emailHtml = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #333; text-align: center;">회원가입 인증</h2>
-        <p style="color: #666;">안녕하세요 ${name}님,</p>
-        <p style="color: #666;">아래 버튼을 클릭하여 회원가입을 완료해주세요.</p>
+        <h2 style="color: #333; text-align: center;">Xác minh email</h2>
+        <p style="color: #666;">Kính chào ${name},</p>
+        <p style="color: #666;">Vui lòng nhấp vào nút bên dưới để hoàn tất đăng ký.</p>
         <div style="text-align: center; margin: 30px 0;">
           <a href="${link}" 
              style="background-color: #4F46E5; color: white; padding: 12px 24px; 
                     text-decoration: none; border-radius: 5px; display: inline-block;">
-            이메일 인증하기
+            Xác minh email
           </a>
         </div>
-        <p style="color: #666; font-size: 14px;">이 링크는 30분 동안만 유효합니다.</p>
+        <p style="color: #666; font-size: 14px;">Liên kết này chỉ có hiệu lực trong vòng 30 phút.</p>
         <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
-        <p style="color: #666; font-size: 14px;">버튼이 작동하지 않는 경우, 아래 링크를 복사하여 브라우저에 붙여넣어주세요:</p>
+        <p style="color: #666; font-size: 14px;">Nếu nút không hoạt động, vui lòng sao chép liên kết bên dưới và dán vào trình duyệt của bạn:</p>
         <p style="color: #666; font-size: 14px; word-break: break-all;">${link}</p>
       </div>
     `;
@@ -83,7 +83,7 @@ export default async function handler(req, res) {
     await sgMail.send({
       to: email,
       from: process.env.FROM_EMAIL,
-      subject: "Jeogi - 이메일 인증",
+      subject: "Jeogi - Xác minh email",
       html: emailHtml,
     });
 
