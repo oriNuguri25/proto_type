@@ -7,6 +7,13 @@ const supabase = createClient(
     auth: {
       autoRefreshToken: false,
       persistSession: false,
+      detectSessionInUrl: false,
+    },
+    global: {
+      headers: {
+        apikey: process.env.SUPABASE_SERVICE_ROLE_KEY,
+        Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
+      },
     },
     db: {
       schema: "public",
@@ -21,15 +28,15 @@ export default async function handler(req, res) {
   try {
     // pending_users에서 사용자 정보 조회
     console.log("Fetching user from pending_users...");
-    const { data: user, error: fetchError } = await supabase
+    const { data: pendingUser, error: fetchError } = await supabase
       .from("pending_users")
       .select("*")
       .eq("token", token)
       .single();
 
-    if (!user || fetchError) {
+    if (!pendingUser || fetchError) {
       console.error("Error fetching user from pending_users:", fetchError);
-      console.log("User data:", user);
+      console.log("User data:", pendingUser);
 
       // 토큰이 유효하지 않은 경우 해당 토큰의 데이터 삭제
       if (token) {
@@ -41,82 +48,113 @@ export default async function handler(req, res) {
     }
 
     console.log("Found pending user:", {
-      email: user.email,
-      name: user.name,
-      nickname: user.nickname,
-      expires_at: user.expires_at,
+      email: pendingUser.email,
+      name: pendingUser.name,
+      nickname: pendingUser.nickname,
+      expires_at: pendingUser.expires_at,
     });
 
     // 토큰 만료 확인
-    if (new Date(user.expires_at) < new Date()) {
-      console.log("Token expired at:", user.expires_at);
+    if (new Date(pendingUser.expires_at) < new Date()) {
+      console.log("Token expired at:", pendingUser.expires_at);
 
       // 만료된 토큰의 데이터 삭제
       console.log("Deleting expired token data...");
-      await supabase.from("pending_users").delete().eq("email", user.email);
+      await supabase
+        .from("pending_users")
+        .delete()
+        .eq("email", pendingUser.email);
 
       return res.redirect(`${process.env.BASE_URL}/login?error=expired-token`);
     }
 
-    // users 테이블에 데이터 삽입 전에 이메일 중복 체크
-    console.log("Checking if email already exists...");
-    const { data: existingUser, error: checkError } = await supabase
-      .from("users")
-      .select("email")
-      .eq("email", user.email)
-      .single();
+    // 이메일 중복 체크 (auth.users 테이블)
+    console.log("Checking if email exists in auth.users...");
+    try {
+      const { data, error: authCheckError } =
+        await supabase.auth.admin.listUsers();
 
-    if (existingUser) {
-      console.log("Email already exists:", user.email);
-      return res.redirect(`${process.env.BASE_URL}/login?error=email-exists`);
-    }
+      if (authCheckError) {
+        console.error("Error checking auth users:", authCheckError);
+        return res.redirect(`${process.env.BASE_URL}/login?error=server-error`);
+      }
 
-    // users 테이블에 데이터 upsert
-    console.log("Attempting to upsert user into users table...");
-    const { data: insertData, error: insertError } = await supabase
-      .from("profiles")
-      .upsert([
-        {
-          email: user.email,
-          name: user.name,
-          password: user.password,
-          nickname: user.nickname,
-        },
-      ])
-      .select();
-
-    if (insertError) {
-      console.error("Error inserting user into users table:", insertError);
-      console.error("Insert error details:", {
-        code: insertError.code,
-        message: insertError.message,
-        details: insertError.details,
-        hint: insertError.hint,
-      });
+      const existingUser = data.users.find(
+        (u) => u.email === pendingUser.email
+      );
+      if (existingUser) {
+        console.log("Email already exists in auth.users:", pendingUser.email);
+        return res.redirect(`${process.env.BASE_URL}/login?error=email-exists`);
+      }
+    } catch (error) {
+      console.error("Error during email check:", error);
       return res.redirect(`${process.env.BASE_URL}/login?error=server-error`);
     }
 
-    console.log("Successfully inserted user:", insertData);
+    // Auth 사용자 생성
+    console.log("Creating auth user...");
+    try {
+      const { data: createUserData, error: createError } =
+        await supabase.auth.admin.createUser({
+          email: pendingUser.email,
+          password: pendingUser.password,
+          email_confirm: true,
+        });
 
-    // pending_users에서 데이터 삭제
-    console.log("Attempting to delete user from pending_users...");
-    const { error: deleteError } = await supabase
-      .from("pending_users")
-      .delete()
-      .eq("email", user.email);
+      if (createError) {
+        throw new Error(`Auth creation error: ${createError.message}`);
+      }
 
-    if (deleteError) {
-      console.error("Error deleting pending user:", deleteError);
-    } else {
-      console.log("Successfully deleted user from pending_users");
+      const authUserId = createUserData?.user?.id;
+      if (!authUserId) {
+        throw new Error("Auth user created but no ID returned");
+      }
+
+      // profiles 테이블에 사용자 정보 저장
+      console.log("Inserting user into profiles table with ID:", authUserId);
+
+      const { error: insertError } = await supabase.from("profiles").upsert({
+        id: authUserId,
+        email: pendingUser.email,
+        name: pendingUser.name,
+        password: pendingUser.password,
+        nickname: pendingUser.nickname,
+        created_at: new Date().toISOString(),
+      });
+
+      if (insertError) {
+        console.error("Error inserting into profiles:", insertError);
+        // Auth 사용자 삭제 시도
+        try {
+          await supabase.auth.admin.deleteUser(authUserId);
+          console.log(
+            "Successfully deleted auth user after profile insertion failure"
+          );
+        } catch (deleteError) {
+          console.error("Error deleting auth user:", deleteError);
+        }
+        return res.redirect(`${process.env.BASE_URL}/login?error=server-error`);
+      }
+
+      console.log("Successfully created profile for user:", pendingUser.email);
+
+      // pending_users에서 데이터 삭제
+      console.log("Deleting from pending_users...");
+      await supabase
+        .from("pending_users")
+        .delete()
+        .eq("email", pendingUser.email);
+
+      // 성공 리다이렉션
+      return res.redirect(`${process.env.BASE_URL}/login?success=true`);
+    } catch (error) {
+      console.error("Auth creation error:", error);
+      return res.redirect(
+        `${process.env.BASE_URL}/login?error=auth-create-fail`
+      );
     }
-
-    // 성공 시 로그인 페이지로 리다이렉션
-    console.log("Redirecting to login page with success message");
-    return res.redirect(`${process.env.BASE_URL}/login?success=true`);
   } catch (error) {
-    console.error("Unexpected error during verification:", error);
-    console.error("Error stack:", error.stack);
+    console.error("Unexpected error:", error);
     return res.redirect(`${process.env.BASE_URL}/login?error=server-error`);
   }
 }

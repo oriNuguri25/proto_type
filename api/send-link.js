@@ -46,7 +46,7 @@ export default async function handler(req, res) {
     const { email, name, password, nickname } = req.body;
 
     const token = uuidv4();
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 유효시간 30분
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
