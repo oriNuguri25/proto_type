@@ -30,6 +30,13 @@ export default async function handler(req, res) {
     if (!user || fetchError) {
       console.error("Error fetching user from pending_users:", fetchError);
       console.log("User data:", user);
+
+      // 토큰이 유효하지 않은 경우 해당 토큰의 데이터 삭제
+      if (token) {
+        console.log("Deleting invalid token data...");
+        await supabase.from("pending_users").delete().eq("token", token);
+      }
+
       return res.redirect(`${process.env.BASE_URL}/login?error=invalid-token`);
     }
 
@@ -43,7 +50,12 @@ export default async function handler(req, res) {
     // 토큰 만료 확인
     if (new Date(user.expires_at) < new Date()) {
       console.log("Token expired at:", user.expires_at);
-      return res.redirect(`${process.env.BASE_URL}/signup/fail`);
+
+      // 만료된 토큰의 데이터 삭제
+      console.log("Deleting expired token data...");
+      await supabase.from("pending_users").delete().eq("email", user.email);
+
+      return res.redirect(`${process.env.BASE_URL}/login?error=expired-token`);
     }
 
     // users 테이블에 데이터 삽입 전에 이메일 중복 체크

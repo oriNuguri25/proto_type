@@ -20,7 +20,7 @@ const SignUpFail = () => {
   };
 
   const handleLoginClick = () => {
-    navigate("/login", { replace: true }); // replace: true로 설정하여 뒤로가기 방지
+    navigate("/login?verification=false", { replace: true }); // replace: true로 설정하여 뒤로가기 방지
   };
 
   return (
@@ -28,13 +28,13 @@ const SignUpFail = () => {
       <div className="w-full max-w-md space-y-8">
         <div className="rounded-lg border bg-white p-8 shadow-sm text-center space-y-6">
           <h2 className="text-2xl font-semibold text-gray-900">
-            링크의 유효기간이 만료되었습니다.
+            Liên kết đã hết hạn.
           </h2>
           <Button
             className="w-full btn-primary text-lg py-6"
             onClick={handleLoginClick}
           >
-            로그인 화면으로 돌아가기
+            Quay lại màn hình đăng nhập
           </Button>
         </div>
       </div>
