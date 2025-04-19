@@ -21,7 +21,7 @@ export default defineConfig({
         target: "https://jeogi.vercel.app", // 원격 API 서버로 변경
         changeOrigin: true,
         secure: false,
-        rewrite: (path) => path.replace(/^\/api/, "/api"),
+        rewrite: (path) => path,
         configure: (proxy, options) => {
           proxy.on("error", (err, req, res) => {
             console.log("프록시 오류:", err);

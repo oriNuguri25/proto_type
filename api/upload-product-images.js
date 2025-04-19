@@ -6,7 +6,7 @@ import cors from "cors";
 
 // CORS 미들웨어 설정
 const corsMiddleware = cors({
-  origin: "*", // 모든 출처 허용
+  origin: ["http://localhost:5173", "https://jeogi.vercel.app"], // 명시적으로 허용할 출처 지정
   methods: ["POST", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
   credentials: true,
@@ -66,21 +66,35 @@ const parseForm = (req) => {
 
 // API 요청 핸들러
 export default async function handler(req, res) {
+  // 클라이언트 요청 출처 확인
+  const origin = req.headers.origin;
+  const allowedOrigins = ["http://localhost:5173", "https://jeogi.vercel.app"];
+  const allowedOrigin = allowedOrigins.includes(origin)
+    ? origin
+    : allowedOrigins[0];
+
+  console.log("[UPLOAD] API 요청 시작:", req.method);
+  console.log("[UPLOAD] 요청 헤더:", req.headers);
+  console.log("[UPLOAD] 요청 출처:", origin);
+
   // OPTIONS 요청 처리 (preflight)
   if (req.method === "OPTIONS") {
-    res.setHeader("Access-Control-Allow-Origin", "*");
+    // preflight 요청에 대한 CORS 헤더 명시적 설정
+    res.setHeader("Access-Control-Allow-Origin", allowedOrigin);
     res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
     res.setHeader(
       "Access-Control-Allow-Headers",
       "Content-Type, Authorization"
     );
+    res.setHeader("Access-Control-Allow-Credentials", "true");
     res.status(200).end();
     return;
   }
 
   try {
-    console.log("[UPLOAD] API 요청 시작:", req.method);
-    console.log("[UPLOAD] 요청 헤더:", req.headers);
+    // POST 요청에 대한 CORS 헤더 명시적 설정
+    res.setHeader("Access-Control-Allow-Origin", allowedOrigin);
+    res.setHeader("Access-Control-Allow-Credentials", "true");
 
     // CORS 미들웨어 실행
     await runMiddleware(req, res, corsMiddleware);
