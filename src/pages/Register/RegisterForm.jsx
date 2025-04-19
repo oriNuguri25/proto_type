@@ -202,7 +202,7 @@ const RegisterForm = () => {
               className="w-full btn-primary"
               disabled={isSubmitting}
             >
-              {isSubmitting ? "처리 중..." : "Đăng sản phẩm"}
+              {isSubmitting ? "Đang xử lý…" : "Đăng sản phẩm"}
             </Button>
           </form>
         </div>

@@ -12,21 +12,23 @@ export const useProductSubmit = (uploadImages, validateImages) => {
     const token = getToken();
     if (!token) throw new Error("로그인이 필요합니다");
 
-    const response = await fetch(
-      "https://jeogi.vercel.app/api/register-product",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        mode: "cors",
-        body: JSON.stringify({
-          ...formData,
-          image_urls: imageUrls,
-        }),
-      }
-    );
+    // 회원가입 API 호출 방식 참고
+    const apiUrl = "https://jeogi.vercel.app/api/register-product";
+    console.log(`상품 등록 요청 URL: ${apiUrl}`);
+
+    const response = await fetch(apiUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+        Origin: "http://localhost:5173", // CORS 요청 시 필요
+      },
+      mode: "cors", // 회원가입과 동일한 방식 적용
+      body: JSON.stringify({
+        ...formData,
+        image_urls: imageUrls,
+      }),
+    });
 
     if (!response.ok) {
       const errorData = await response.json();
