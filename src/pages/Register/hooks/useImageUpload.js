@@ -69,17 +69,19 @@ export const useImageUpload = () => {
         formData.append("images", file);
       });
 
-      // 이미지 업로드 API 요청
-      const apiUrl = "https://jeogi.vercel.app/api/upload-product-images";
+      // 개발 환경에서는 프록시 URL을 사용하고, 프로덕션에서는 전체 URL 사용
+      const apiUrl = import.meta.env.DEV
+        ? "/api/upload-product-images"
+        : "https://jeogi.vercel.app/api/upload-product-images";
+
       console.log(`이미지 업로드 요청 URL: ${apiUrl}`);
 
-      // API 요청 보내기
+      // API 요청 보내기 - CORS 옵션 제거하고 단순화
       const response = await fetch(apiUrl, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
         },
-        mode: "cors",
         body: formData,
       });
 

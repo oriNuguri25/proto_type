@@ -6,10 +6,11 @@ import cors from "cors";
 
 // CORS 미들웨어 설정
 const corsMiddleware = cors({
-  origin: ["http://localhost:5173", "https://jeogi.vercel.app"],
+  origin: "*", // 모든 출처 허용
   methods: ["POST", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
   credentials: true,
+  optionsSuccessStatus: 200,
 });
 
 // CORS 미들웨어를 Promise로 래핑
@@ -64,27 +65,18 @@ const parseForm = (req) => {
 
 // API 요청 핸들러
 export default async function handler(req, res) {
+  // CORS 헤더 직접 설정
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+
+  // OPTIONS 요청 처리 (preflight)
+  if (req.method === "OPTIONS") {
+    res.status(200).end();
+    return;
+  }
+
   try {
-    // CORS 헤더 수동 설정 (preflight 요청을 위해)
-    res.setHeader(
-      "Access-Control-Allow-Origin",
-      req.headers.origin || "http://localhost:5173"
-    );
-    res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-    res.setHeader(
-      "Access-Control-Allow-Headers",
-      "Content-Type, Authorization"
-    );
-    res.setHeader("Access-Control-Allow-Credentials", "true");
-
-    // OPTIONS 요청 처리 (CORS preflight)
-    if (req.method === "OPTIONS") {
-      return res.status(200).end();
-    }
-
-    // cors 미들웨어 실행 - 일반 요청의 경우
-    await runMiddleware(req, res, corsMiddleware);
-
     // POST 요청만 처리
     if (req.method !== "POST") {
       return res.status(405).json({
