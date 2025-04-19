@@ -1,6 +1,10 @@
 import { useState, useRef } from "react";
 import { getToken } from "@/utils/auth";
 
+/**
+ * 상품 이미지 업로드를 위한 커스텀 훅
+ * 파일 선택, 미리보기, 제거 및 업로드 기능 제공
+ */
 export const useImageUpload = () => {
   const fileInputRef = useRef(null);
   const [imageFiles, setImageFiles] = useState([]);
@@ -65,11 +69,11 @@ export const useImageUpload = () => {
         formData.append("images", file);
       });
 
-      // 회원가입 구현 방식을 참고한 API 요청
+      // 이미지 업로드 API 요청
       const apiUrl = "https://jeogi.vercel.app/api/upload-product-images";
       console.log(`이미지 업로드 요청 URL: ${apiUrl}`);
 
-      // 회원가입 페이지와 동일한 방식으로 요청
+      // API 요청 보내기
       const response = await fetch(apiUrl, {
         method: "POST",
         headers: {
