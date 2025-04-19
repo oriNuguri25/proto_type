@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useSearchParams, useNavigate } from "react-router-dom";
+import { useSearchParams, useNavigate, useLocation } from "react-router-dom";
 import { Link } from "react-router-dom";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -21,6 +21,7 @@ const supabase = createClient(
 
 const Login = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const [successMessage, setSuccessMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -32,6 +33,9 @@ const Login = () => {
     email: "",
     password: "",
   });
+
+  // 이전 위치 정보 가져오기
+  const from = location.state?.from || "/";
 
   useEffect(() => {
     const success = searchParams.get("success");
@@ -70,6 +74,7 @@ const Login = () => {
     e.preventDefault();
     setFormErrors({ email: "", password: "" });
     setSuccessMessage("");
+    setIsLoading(true);
 
     try {
       // 이메일 형식 검증
@@ -78,6 +83,7 @@ const Login = () => {
           ...prev,
           email: "가천대학교 이메일(@gachon.ac.kr)로만 로그인이 가능합니다.",
         }));
+        setIsLoading(false);
         return;
       }
 
@@ -93,6 +99,7 @@ const Login = () => {
           ...prev,
           email: "Đã xảy ra lỗi. Vui lòng thử lại sau.",
         }));
+        setIsLoading(false);
         return;
       }
 
@@ -106,6 +113,7 @@ const Login = () => {
           ...prev,
           password: "Mật khẩu không chính xác.",
         }));
+        setIsLoading(false);
         return;
       }
 
@@ -134,7 +142,10 @@ const Login = () => {
 
       // 토큰 저장 및 리다이렉트
       setToken(token);
-      navigate(`/main?${token}`, { replace: true });
+
+      // 이전 페이지로 리다이렉트 (없으면 메인 페이지로)
+      // replace: true 옵션으로 브라우저 히스토리를 대체하여 뒤로가기 방지
+      navigate(from, { replace: true });
       setSuccessMessage("로그인 성공!");
     } catch (error) {
       console.error("로그인 중 오류:", error);
@@ -142,6 +153,8 @@ const Login = () => {
         email: error.message || "Đã xảy ra lỗi. Vui lòng thử lại sau.",
         password: "",
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 

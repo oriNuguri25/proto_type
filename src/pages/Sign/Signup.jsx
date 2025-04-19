@@ -15,17 +15,9 @@ const Signup = () => {
     nickname: "",
   });
   const [error, setError] = useState("");
-  const [emailAvailable, setEmailAvailable] = useState(false);
-  const [nicknameAvailable, setNicknameAvailable] = useState(false);
-  const {
-    emailError,
-    nicknameError,
-    checkEmailExists,
-    checkNicknameExists,
-    clearEmailError,
-    clearNicknameError,
-    setEmailError,
-  } = useValidation();
+  const [emailError, setEmailError] = useState("");
+  const [nicknameError, setNicknameError] = useState("");
+  const { checkEmailExists, checkNicknameExists } = useValidation();
 
   const handleChange = (e) => {
     const { id, value } = e.target;
@@ -33,57 +25,22 @@ const Signup = () => {
       ...prev,
       [id]: value,
     }));
+
+    // 필드 입력 시 관련 에러 메시지 초기화
     if (id === "email") {
-      clearEmailError();
-      setEmailAvailable(false);
+      setEmailError("");
     }
     if (id === "nickname") {
-      clearNicknameError();
-      setNicknameAvailable(false);
+      setNicknameError("");
     }
-  };
-
-  const handleEmailBlur = async (e) => {
-    console.log("이메일 필드 blur 이벤트 발생");
-    const email = e.target.value.trim();
-
-    if (!email) {
-      console.log("이메일이 비어있음");
-      setEmailAvailable(false);
-      return;
-    }
-
-    if (!email.endsWith("@gachon.ac.kr")) {
-      console.log("가천대 이메일이 아님");
-      setEmailError(
-        "Chỉ có thể sử dụng email của Đại học Gachon (@gachon.ac.kr)."
-      );
-      setEmailAvailable(false);
-      return;
-    }
-
-    console.log("이메일 중복 체크 호출");
-    const exists = await checkEmailExists(email);
-    setEmailAvailable(!exists);
-  };
-
-  const handleNicknameBlur = async (e) => {
-    console.log("닉네임 필드 blur 이벤트 발생");
-    const nickname = e.target.value.trim();
-
-    if (!nickname) {
-      console.log("닉네임이 비어있음");
-      setNicknameAvailable(false);
-      return;
-    }
-
-    console.log("닉네임 중복 체크 호출");
-    const exists = await checkNicknameExists(nickname);
-    setNicknameAvailable(!exists);
   };
 
   const handleSubmit = async () => {
+    // 전체 폼 에러 초기화
     setError("");
+    setEmailError("");
+    setNicknameError("");
+
     console.log("회원가입 시도:", formData);
 
     // 기본적인 유효성 검사
@@ -100,23 +57,11 @@ const Signup = () => {
 
     // 이메일 도메인 검사
     if (!formData.email.endsWith("@gachon.ac.kr")) {
-      setError("Chỉ có thể sử dụng email của Đại học Gachon (@gachon.ac.kr).");
-      return;
-    }
-
-    // 이메일 중복 체크
-    console.log("최종 이메일 중복 체크");
-    const emailExists = await checkEmailExists(formData.email);
-    if (emailExists) {
-      console.log("중복된 이메일로 인한 제출 중단");
-      return;
-    }
-
-    // 닉네임 중복 체크
-    console.log("최종 닉네임 중복 체크");
-    const nicknameExists = await checkNicknameExists(formData.nickname);
-    if (nicknameExists) {
-      console.log("중복된 닉네임으로 인한 제출 중단");
+      setEmailError(
+        "Chỉ có thể sử dụng email của Đại học Gachon (@gachon.ac.kr)."
+      );
+      // 이메일 필드 초기화
+      setFormData((prev) => ({ ...prev, email: "" }));
       return;
     }
 
@@ -132,6 +77,30 @@ const Signup = () => {
     }
 
     try {
+      // 이메일 중복 체크
+      console.log("이메일 중복 체크");
+      const emailExists = await checkEmailExists(formData.email);
+      if (emailExists) {
+        setEmailError(
+          "Email này đã được sử dụng. Vui lòng sử dụng email khác."
+        );
+        // 이메일 필드 초기화
+        setFormData((prev) => ({ ...prev, email: "" }));
+        return;
+      }
+
+      // 닉네임 중복 체크
+      console.log("닉네임 중복 체크");
+      const nicknameExists = await checkNicknameExists(formData.nickname);
+      if (nicknameExists) {
+        setNicknameError(
+          "Biệt danh này đã được sử dụng. Vui lòng chọn biệt danh khác."
+        );
+        // 닉네임 필드 초기화
+        setFormData((prev) => ({ ...prev, nickname: "" }));
+        return;
+      }
+
       // API 호출 로직
       const response = await fetch("https://jeogi.vercel.app/api/send-link", {
         method: "POST",
@@ -192,24 +161,17 @@ const Signup = () => {
           <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email trường học</Label>
-              <div className="flex gap-2">
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="email@gachon.ac.kr"
-                  className={`flex-1 ${emailError ? "border-red-500" : ""}`}
-                  value={formData.email}
-                  onChange={handleChange}
-                  onBlur={handleEmailBlur}
-                />
-              </div>
-              {emailError ? (
+              <Input
+                id="email"
+                type="email"
+                placeholder="email@gachon.ac.kr"
+                className={`flex-1 ${emailError ? "border-red-500" : ""}`}
+                value={formData.email}
+                onChange={handleChange}
+              />
+              {emailError && (
                 <p className="text-sm text-red-500 mt-1">{emailError}</p>
-              ) : emailAvailable && formData.email ? (
-                <p className="text-sm text-green-500 mt-1">
-                  Email có thể sử dụng
-                </p>
-              ) : null}
+              )}
             </div>
 
             {/* 이름 입력 */}
@@ -260,15 +222,10 @@ const Signup = () => {
                 className={`flex-1 ${nicknameError ? "border-red-500" : ""}`}
                 value={formData.nickname}
                 onChange={handleChange}
-                onBlur={handleNicknameBlur}
               />
-              {nicknameError ? (
+              {nicknameError && (
                 <p className="text-sm text-red-500 mt-1">{nicknameError}</p>
-              ) : nicknameAvailable && formData.nickname ? (
-                <p className="text-sm text-green-500 mt-1">
-                  Tên người dùng có thể sử dụng
-                </p>
-              ) : null}
+              )}
             </div>
 
             <Button className="w-full btn-primary" onClick={handleSubmit}>

@@ -41,3 +41,16 @@ export const getUserFromToken = (token) => {
     return null;
   }
 };
+
+// 로그아웃 함수 (history 객체 옵션 추가)
+export const logout = (navigate) => {
+  removeToken();
+
+  // navigate 객체가 있으면 React Router의 navigate 함수를 사용하여 뒤로가기 방지
+  if (navigate) {
+    navigate("/", { replace: true });
+  } else {
+    // 기존 방식 (페이지 전체 새로고침)
+    window.location.replace("/");
+  }
+};
