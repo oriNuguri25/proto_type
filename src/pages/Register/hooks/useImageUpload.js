@@ -54,41 +54,36 @@ export const useImageUpload = () => {
     if (imageFiles.length === 0) return [];
 
     try {
+      console.log("이미지 업로드 시작:", imageFiles.length, "개 파일");
+
       const token = getToken();
       if (!token) throw new Error("로그인이 필요합니다");
 
-      // 개발 환경인지 확인
-      const isDev =
-        import.meta.env?.MODE === "development" ||
-        process.env.NODE_ENV === "development";
-
       // FormData 생성
       const formData = new FormData();
-      imageFiles.forEach((file, index) => {
-        // API 서버에서 예상하는 형식으로 파일 추가
-        // formidable은 다중 파일을 같은 이름으로 처리할 수 있음
+      imageFiles.forEach((file) => {
         formData.append("images", file);
       });
 
-      // API 서버 URL 설정 (개발/프로덕션 환경에 따라 다름)
-      const apiUrl = isDev
-        ? "/api/upload-product-images" // 개발 환경
-        : "/api/upload-product-images"; // 프로덕션 환경 (필요시 변경)
+      // 회원가입 구현 방식을 참고한 API 요청
+      const apiUrl = "https://jeogi.vercel.app/api/upload-product-images";
+      console.log(`이미지 업로드 요청 URL: ${apiUrl}`);
 
-      console.log(`이미지 업로드 요청: ${apiUrl}`);
-
-      // 서버 API 호출
+      // 회원가입 페이지와 동일한 방식으로 요청
       const response = await fetch(apiUrl, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
         },
+        mode: "cors",
         body: formData,
       });
 
+      console.log("서버 응답 상태:", response.status, response.statusText);
+
       if (!response.ok) {
         const errorText = await response.text();
-        let errorMessage = "이미지 업로드 중 오류가 발생했습니다";
+        let errorMessage = `이미지 업로드 중 오류가 발생했습니다. 상태 코드: ${response.status}`;
 
         try {
           const errorData = JSON.parse(errorText);
@@ -112,7 +107,7 @@ export const useImageUpload = () => {
         );
       }
     } catch (error) {
-      console.error("이미지 업로드 오류:", error);
+      console.error("이미지 업로드 오류:", error.message);
       throw error;
     }
   };

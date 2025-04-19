@@ -2,6 +2,27 @@ import formidable from "formidable";
 import { createClient } from "@supabase/supabase-js";
 import fs from "fs";
 import path from "path";
+import cors from "cors";
+
+// CORS 미들웨어 설정
+const corsMiddleware = cors({
+  origin: ["http://localhost:5173", "https://jeogi.vercel.app"],
+  methods: ["POST", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+  credentials: true,
+});
+
+// CORS 미들웨어를 Promise로 래핑
+const runMiddleware = (req, res, fn) => {
+  return new Promise((resolve, reject) => {
+    fn(req, res, (result) => {
+      if (result instanceof Error) {
+        return reject(result);
+      }
+      return resolve(result);
+    });
+  });
+};
 
 // Supabase 클라이언트 초기화
 const supabase = createClient(
@@ -43,15 +64,23 @@ const parseForm = (req) => {
 
 // API 요청 핸들러
 export default async function handler(req, res) {
-  // POST 요청만 처리
-  if (req.method !== "POST") {
-    return res.status(405).json({
-      success: false,
-      message: "허용되지 않는 메서드입니다",
-    });
-  }
-
   try {
+    // CORS 미들웨어 실행
+    await runMiddleware(req, res, corsMiddleware);
+
+    // OPTIONS 요청 처리 (CORS preflight)
+    if (req.method === "OPTIONS") {
+      return res.status(200).end();
+    }
+
+    // POST 요청만 처리
+    if (req.method !== "POST") {
+      return res.status(405).json({
+        success: false,
+        message: "허용되지 않는 메서드입니다",
+      });
+    }
+
     // 인증 토큰 확인
     const token = req.headers.authorization;
     if (!token) {
