@@ -69,11 +69,8 @@ export const useImageUpload = () => {
         formData.append("images", file);
       });
 
-      // 개발 환경에서는 프록시 URL을 사용하고, 프로덕션에서는 전체 URL 사용
-      const apiUrl = import.meta.env.DEV
-        ? "/api/upload-product-images"
-        : "https://jeogi.vercel.app/api/upload-product-images";
-
+      // 항상 직접 Vercel API URL 사용
+      const apiUrl = "https://jeogi.vercel.app/api/upload-product-images";
       console.log(`이미지 업로드 요청 URL: ${apiUrl}`);
 
       // API 요청 보내기 - CORS 옵션 제거하고 단순화
@@ -87,13 +84,22 @@ export const useImageUpload = () => {
 
       console.log("서버 응답 상태:", response.status, response.statusText);
 
+      // 응답 텍스트 먼저 가져오기
+      const responseText = await response.text();
+      console.log("서버 응답 내용:", responseText);
+
       if (!response.ok) {
-        const errorText = await response.text();
         let errorMessage = `이미지 업로드 중 오류가 발생했습니다. 상태 코드: ${response.status}`;
 
         try {
-          const errorData = JSON.parse(errorText);
-          errorMessage = errorData.message || errorMessage;
+          // 응답이 JSON인 경우에만 파싱 시도
+          if (
+            responseText.trim().startsWith("{") &&
+            responseText.trim().endsWith("}")
+          ) {
+            const errorData = JSON.parse(responseText);
+            errorMessage = errorData.message || errorMessage;
+          }
         } catch (e) {
           console.error("응답 파싱 오류:", e);
         }
@@ -101,7 +107,21 @@ export const useImageUpload = () => {
         throw new Error(errorMessage);
       }
 
-      const result = await response.json();
+      let result;
+      try {
+        // 응답이 JSON인 경우에만 파싱 시도
+        if (
+          responseText.trim().startsWith("{") &&
+          responseText.trim().endsWith("}")
+        ) {
+          result = JSON.parse(responseText);
+        } else {
+          throw new Error("서버 응답이 유효한 JSON 형식이 아닙니다");
+        }
+      } catch (error) {
+        console.error("응답 파싱 오류:", error);
+        throw new Error("서버 응답을 처리하는 중 오류가 발생했습니다");
+      }
 
       // API 서버 응답 구조에 맞게 처리
       if (result.success && result.data && result.data.imageUrls) {
