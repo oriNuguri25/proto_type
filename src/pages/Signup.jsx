@@ -15,6 +15,8 @@ const Signup = () => {
     nickname: "",
   });
   const [error, setError] = useState("");
+  const [emailAvailable, setEmailAvailable] = useState(false);
+  const [nicknameAvailable, setNicknameAvailable] = useState(false);
   const {
     emailError,
     nicknameError,
@@ -33,9 +35,11 @@ const Signup = () => {
     }));
     if (id === "email") {
       clearEmailError();
+      setEmailAvailable(false);
     }
     if (id === "nickname") {
       clearNicknameError();
+      setNicknameAvailable(false);
     }
   };
 
@@ -45,6 +49,7 @@ const Signup = () => {
 
     if (!email) {
       console.log("이메일이 비어있음");
+      setEmailAvailable(false);
       return;
     }
 
@@ -53,11 +58,13 @@ const Signup = () => {
       setEmailError(
         "Chỉ có thể sử dụng email của Đại học Gachon (@gachon.ac.kr)."
       );
+      setEmailAvailable(false);
       return;
     }
 
     console.log("이메일 중복 체크 호출");
-    await checkEmailExists(email);
+    const exists = await checkEmailExists(email);
+    setEmailAvailable(!exists);
   };
 
   const handleNicknameBlur = async (e) => {
@@ -66,11 +73,13 @@ const Signup = () => {
 
     if (!nickname) {
       console.log("닉네임이 비어있음");
+      setNicknameAvailable(false);
       return;
     }
 
     console.log("닉네임 중복 체크 호출");
-    await checkNicknameExists(nickname);
+    const exists = await checkNicknameExists(nickname);
+    setNicknameAvailable(!exists);
   };
 
   const handleSubmit = async () => {
@@ -194,9 +203,13 @@ const Signup = () => {
                   onBlur={handleEmailBlur}
                 />
               </div>
-              {emailError && (
+              {emailError ? (
                 <p className="text-sm text-red-500 mt-1">{emailError}</p>
-              )}
+              ) : emailAvailable && formData.email ? (
+                <p className="text-sm text-green-500 mt-1">
+                  Email có thể sử dụng
+                </p>
+              ) : null}
             </div>
 
             {/* 이름 입력 */}
@@ -249,9 +262,13 @@ const Signup = () => {
                 onChange={handleChange}
                 onBlur={handleNicknameBlur}
               />
-              {nicknameError && (
+              {nicknameError ? (
                 <p className="text-sm text-red-500 mt-1">{nicknameError}</p>
-              )}
+              ) : nicknameAvailable && formData.nickname ? (
+                <p className="text-sm text-green-500 mt-1">
+                  Tên người dùng có thể sử dụng
+                </p>
+              ) : null}
             </div>
 
             <Button className="w-full btn-primary" onClick={handleSubmit}>
