@@ -93,23 +93,52 @@ export const useProductEdit = (productId, uploadImages, validateImages) => {
     setError(null);
 
     try {
-      // 이미지 유효성 검사
-      if (validateImages && !imageUrls) {
-        const imagesValid = validateImages();
+      // 이미지 URL 배열 저장 변수
+      let finalImageUrls = [];
+
+      // 이미지 삭제 여부 확인
+      const wasImageRemoved = window.imageRemoved === true;
+
+      // 이미지 URL이 이미 배열로 제공된 경우 (사전 처리된 경우)
+      if (imageUrls && Array.isArray(imageUrls)) {
+        console.log("미리보기 URL 또는 초기 URL 사용:", imageUrls);
+        finalImageUrls = imageUrls;
+      }
+      // 이미지 업로드가 필요한 경우
+      else if (uploadImages) {
+        const imagesValid = validateImages ? validateImages() : true;
         if (!imagesValid) {
           setIsSubmitting(false);
           return false;
         }
-      }
 
-      // 이미지 업로드 (필요한 경우)
-      let uploadedImageUrls = imageUrls;
-      if (uploadImages && !imageUrls) {
-        uploadedImageUrls = await uploadImages();
-        if (!uploadedImageUrls) {
+        try {
+          const uploadedUrls = await uploadImages();
+          if (!uploadedUrls || !Array.isArray(uploadedUrls)) {
+            throw new Error("이미지 업로드에 실패했습니다.");
+          }
+          finalImageUrls = uploadedUrls;
+          console.log("새로 업로드된 이미지 URL:", finalImageUrls);
+        } catch (uploadError) {
+          console.error("이미지 업로드 오류:", uploadError);
+          setError(
+            uploadError.message || "이미지 업로드 중 오류가 발생했습니다"
+          );
           setIsSubmitting(false);
           return false;
         }
+      }
+      // 업로드할 이미지도 없고 제공된 URL도 없는 경우, 기존 이미지 URL 사용
+      else if (product && product.image_urls && !wasImageRemoved) {
+        finalImageUrls = product.image_urls;
+        console.log("기존 이미지 URL 사용:", finalImageUrls);
+      }
+
+      // 이미지가 없는 경우 오류 처리
+      if (finalImageUrls.length === 0) {
+        setError("Vui lòng tải lên ít nhất một hình ảnh.");
+        setIsSubmitting(false);
+        return false;
       }
 
       // JWT 토큰 가져오기
@@ -122,31 +151,47 @@ export const useProductEdit = (productId, uploadImages, validateImages) => {
 
       // 업데이트할 데이터 준비
       const productData = { ...formData };
-      if (uploadedImageUrls) {
-        productData.image_urls = uploadedImageUrls;
-      }
+
+      // 이미지 URL 설정
+      productData.image_urls = finalImageUrls;
+      console.log("서버로 전송할 이미지 URL:", productData.image_urls);
 
       // API 요청 보내기
-      const response = await fetch(
-        `${
-          import.meta.env.DEV
-            ? "http://localhost:5173"
-            : "https://jeogi.vercel.app"
-        }/api/update-product`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            productId,
-            productData,
-          }),
-        }
-      );
+      const apiUrl = import.meta.env.DEV
+        ? "http://localhost:5173"
+        : "https://jeogi.vercel.app";
 
-      const data = await response.json();
+      console.log(`API 요청 URL: ${apiUrl}/api/update-product`);
+      console.log("요청 데이터:", {
+        productId,
+        productData: {
+          ...productData,
+          image_urls: productData.image_urls,
+        },
+      });
+
+      const response = await fetch(`${apiUrl}/api/update-product`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          productId,
+          productData,
+        }),
+      });
+
+      const responseText = await response.text();
+      console.log("서버 응답 텍스트:", responseText);
+
+      let data;
+      try {
+        data = JSON.parse(responseText);
+      } catch (err) {
+        console.error("응답 파싱 오류:", err);
+        throw new Error("서버 응답을 파싱할 수 없습니다");
+      }
 
       if (!response.ok) {
         throw new Error(data.message || "Cập nhật sản phẩm thất bại");

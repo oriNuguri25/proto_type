@@ -54,7 +54,8 @@ const EditForm = ({ productId }) => {
     imageFiles,
     updateProduct,
     handleFileSelect,
-    setError
+    setError,
+    imagePreviewUrls
   );
 
   // 상품 정보가 로드되면 이미지 미리보기 설정

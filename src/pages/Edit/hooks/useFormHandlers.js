@@ -13,7 +13,8 @@ export const useFormHandlers = (
   imageFiles,
   updateProduct,
   handleFileSelect,
-  setError
+  setError,
+  imagePreviewUrls // 미리보기 URL 추가
 ) => {
   const navigate = useNavigate();
   const [formSubmitted, setFormSubmitted] = useState(false);
@@ -85,18 +86,27 @@ export const useFormHandlers = (
       return false;
     }
 
+    // 이미지 삭제 여부 확인
+    const wasImageRemoved = window.imageRemoved === true;
+
     // 이미지가 변경되지 않았으면 기존 이미지 URLs 사용
     const useExistingImages =
-      imageFiles.length === 0 && initialImageUrls.length > 0;
+      !wasImageRemoved &&
+      imageFiles.length === 0 &&
+      initialImageUrls.length > 0;
 
     // 이미지가 없는 경우 검증
-    if (!useExistingImages && imageFiles.length === 0) {
+    if (
+      !useExistingImages &&
+      imageFiles.length === 0 &&
+      imagePreviewUrls.length === 0
+    ) {
       setError("Vui lòng tải lên ít nhất một hình ảnh.");
       return false;
     }
 
     return true;
-  }, [formData, imageFiles, initialImageUrls, setError]);
+  }, [formData, imageFiles, initialImageUrls, imagePreviewUrls, setError]);
 
   // 폼 제출 이벤트 처리
   const onSubmit = useCallback(
@@ -109,14 +119,39 @@ export const useFormHandlers = (
         return false;
       }
 
-      // 이미지가 변경되지 않았으면 기존 이미지 URLs 사용
-      const useExistingImages =
-        imageFiles.length === 0 && initialImageUrls.length > 0;
-      const imageUrls = useExistingImages ? initialImageUrls : null;
+      // 이미지 처리 로직
+      let imageUrls = null;
+
+      // 이미지 삭제 여부 확인
+      const wasImageRemoved = window.imageRemoved === true;
+
+      // 1. 이미지가 삭제되었고 새 이미지가 있는 경우
+      if (wasImageRemoved && imageFiles.length > 0) {
+        console.log("이미지 삭제 후 새 이미지 업로드");
+        imageUrls = null; // uploadImages 함수를 통해 업로드
+      }
+      // 2. 이미지가 삭제되었고 새 이미지가 없는 경우 (미리보기 URL만 사용)
+      else if (wasImageRemoved) {
+        console.log("이미지 삭제됨, 현재 미리보기 URL 사용:", imagePreviewUrls);
+        imageUrls = imagePreviewUrls; // 현재 미리보기 URL 사용
+      }
+      // 3. 이미지가 삭제되지 않았지만 새 이미지가 있는 경우
+      else if (imageFiles.length > 0) {
+        console.log("새로 업로드된 이미지 파일 사용:", imageFiles.length, "개");
+        imageUrls = null; // uploadImages 함수를 통해 업로드
+      }
+      // 4. 이미지 변경이 없는 경우: 기존 이미지 URL 유지
+      else if (initialImageUrls.length > 0) {
+        console.log("기존 이미지 URL 유지:", initialImageUrls);
+        imageUrls = initialImageUrls;
+      }
 
       const success = await updateProduct(e, formData, imageUrls);
 
       if (success) {
+        // 전역 이미지 삭제 플래그 초기화
+        window.imageRemoved = false;
+
         // 수정 성공 시 메인 페이지로 이동하고 뒤로가기 방지
         sessionStorage.setItem("productUpdated", "true");
         navigate("/", { replace: true }); // replace: true로 설정하여 히스토리를 대체함으로써 뒤로가기 방지
@@ -126,6 +161,7 @@ export const useFormHandlers = (
       formData,
       imageFiles,
       initialImageUrls,
+      imagePreviewUrls,
       updateProduct,
       navigate,
       validateForm,

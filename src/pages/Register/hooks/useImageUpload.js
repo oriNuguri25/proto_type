@@ -40,18 +40,35 @@ export const useImageUpload = () => {
   };
 
   const handleRemoveImage = (index) => {
-    const newFiles = [...imageFiles];
-    const newPreviewUrls = [...imagePreviewUrls];
+    try {
+      if (index < 0 || index >= imagePreviewUrls.length) {
+        console.error("Invalid index for image removal:", index);
+        return;
+      }
 
-    // 미리보기 URL 해제
-    URL.revokeObjectURL(newPreviewUrls[index]);
+      // 배열에서 해당 이미지 제거
+      const newFiles = [...imageFiles];
+      newFiles.splice(index, 1);
 
-    // 파일과 미리보기 URL 배열에서 제거
-    newFiles.splice(index, 1);
-    newPreviewUrls.splice(index, 1);
+      const newPreviewUrls = [...imagePreviewUrls];
+      newPreviewUrls.splice(index, 1);
 
-    setImageFiles(newFiles);
-    setImagePreviewUrls(newPreviewUrls);
+      // 이미지 삭제 여부를 전역 변수로 표시
+      window.imageRemoved = true;
+
+      console.log(
+        `이미지 ${index}번 삭제됨, 남은 이미지: ${newFiles.length}개`
+      );
+      console.log("업데이트된 미리보기 URL:", newPreviewUrls);
+
+      // 상태 업데이트
+      setImageFiles(newFiles);
+      setImagePreviewUrls(newPreviewUrls);
+      setImageError("");
+    } catch (error) {
+      console.error("이미지 제거 중 오류 발생:", error);
+      setImageError("이미지를 제거하는 동안 오류가 발생했습니다.");
+    }
   };
 
   const uploadImages = async () => {

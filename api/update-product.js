@@ -103,8 +103,14 @@ const findRemovedImages = (originalUrls, newUrls) => {
   if (!originalUrls || !Array.isArray(originalUrls)) return [];
   if (!newUrls || !Array.isArray(newUrls)) return [...originalUrls];
 
+  console.log("원본 이미지 URL:", originalUrls);
+  console.log("새 이미지 URL:", newUrls);
+
   // 원본 배열에는 있지만 새 배열에는 없는 URL 찾기
-  return originalUrls.filter((url) => !newUrls.includes(url));
+  const removedUrls = originalUrls.filter((url) => !newUrls.includes(url));
+  console.log("삭제된 이미지 URL:", removedUrls);
+
+  return removedUrls;
 };
 
 // JWT 토큰에서 사용자 ID 추출
@@ -315,6 +321,10 @@ export default async function handler(req, res) {
       // 삭제된 이미지 확인
       const originalImageUrls = existingProduct.image_urls || [];
       const newImageUrls = productData.image_urls || [];
+
+      console.log("기존 이미지 개수:", originalImageUrls.length);
+      console.log("새 이미지 개수:", newImageUrls.length);
+
       const removedImageUrls = findRemovedImages(
         originalImageUrls,
         newImageUrls
@@ -326,8 +336,12 @@ export default async function handler(req, res) {
         console.log(
           `${removedImageUrls.length}개의 이미지가 삭제되었습니다. 스토리지에서 제거 시도...`
         );
+
+        // 이미지 삭제 시도
         imageDeleteResult = await deleteImagesFromStorage(removedImageUrls);
         console.log("이미지 삭제 결과:", imageDeleteResult);
+      } else {
+        console.log("삭제된 이미지가 없습니다. 스토리지 작업 건너뜀.");
       }
 
       // 업데이트할 필드 구성
@@ -339,13 +353,14 @@ export default async function handler(req, res) {
           description: productData.description,
         }),
         ...(productData.price && {
-          price: Number(productData.price.replace(/,/g, "")),
+          price: Number(productData.price.toString().replace(/,/g, "")),
         }),
         ...(productData.status && { status: productData.status }),
         ...(productData.purchase_link && {
           purchase_link: productData.purchase_link,
         }),
-        ...(productData.image_urls && { image_urls: productData.image_urls }),
+        // 이미지 URL 배열 명시적으로 세팅
+        image_urls: productData.image_urls,
         // 한국 시간(KST, UTC+9)으로 업데이트 시간 설정
         updated_at: new Date(
           new Date().getTime() + 9 * 60 * 60 * 1000
@@ -353,6 +368,7 @@ export default async function handler(req, res) {
       };
 
       console.log("업데이트할 데이터:", updateData);
+      console.log("업데이트할 이미지 배열:", updateData.image_urls);
 
       // SERVICE_ROLE_KEY를 사용하여 상품 정보 업데이트
       const { data: updatedProduct, error: updateError } = await supabase
@@ -370,7 +386,18 @@ export default async function handler(req, res) {
         });
       }
 
-      console.log("상품 정보가 성공적으로 업데이트되었습니다:", updatedProduct);
+      // 업데이트 결과 확인
+      console.log("상품 정보가 성공적으로 업데이트되었습니다:");
+      console.log("업데이트된 이미지 URL:", updatedProduct[0].image_urls);
+
+      // 업데이트 확인을 위해 다시 상품 정보 조회
+      const { data: verifyProduct } = await supabase
+        .from("products")
+        .select("image_urls")
+        .eq("id", productId)
+        .single();
+
+      console.log("DB 업데이트 확인 - 이미지 URL:", verifyProduct?.image_urls);
 
       return res.status(200).json({
         success: true,
