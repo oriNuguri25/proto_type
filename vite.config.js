@@ -45,6 +45,9 @@ export default defineConfig({
         drop_console: true,
         drop_debugger: true,
       },
+      format: {
+        comments: false, // 모든 주석 제거
+      },
     },
   },
 });

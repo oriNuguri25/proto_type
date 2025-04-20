@@ -10,6 +10,7 @@
     "api",
     "src/components/ui/textarea.jsx",
     "src/components/ui/sonner.jsx",
-    "src/components/ui/select.jsx"
+    "src/components/ui/select.jsx",
+    "src/components/ui/badge.jsx"
   ]
 }

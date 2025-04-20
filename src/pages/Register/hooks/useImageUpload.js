@@ -16,7 +16,7 @@ export const useImageUpload = () => {
 
     // 최대 5개 파일 제한
     if (imageFiles.length + files.length > 5) {
-      setError("최대 5개의 이미지만 업로드 가능합니다.");
+      setError("Chỉ được tải lên tối đa 5 hình ảnh.");
       return;
     }
 
@@ -156,7 +156,7 @@ export const useImageUpload = () => {
 
   const validateImages = () => {
     if (imageFiles.length === 0) {
-      setImageError("최소 한 개 이상의 이미지를 업로드해주세요.");
+      setImageError("Vui lòng tải lên ít nhất một hình ảnh.");
       return false;
     }
     return true;

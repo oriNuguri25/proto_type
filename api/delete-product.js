@@ -94,7 +94,7 @@ export default async function handler(req, res) {
     if (!token) {
       return res.status(401).json({
         success: false,
-        message: "인증 정보가 필요합니다",
+        message: "Cần thông tin xác thực",
       });
     }
 
@@ -105,7 +105,7 @@ export default async function handler(req, res) {
     if (!userId) {
       return res.status(401).json({
         success: false,
-        message: "유효하지 않은 인증 토큰입니다",
+        message: "Token xác thực không hợp lệ",
       });
     }
 
@@ -116,7 +116,7 @@ export default async function handler(req, res) {
     if (!productId) {
       return res.status(400).json({
         success: false,
-        message: "상품 ID가 필요합니다",
+        message: "Cần mã ID sản phẩm",
       });
     }
 
@@ -131,7 +131,7 @@ export default async function handler(req, res) {
       console.error("상품 조회 오류:", productError);
       return res.status(500).json({
         success: false,
-        message: "상품 정보 조회 중 오류가 발생했습니다",
+        message: "Đã xảy ra lỗi khi tải thông tin sản phẩm",
         error: productError.message,
       });
     }
@@ -139,7 +139,7 @@ export default async function handler(req, res) {
     if (!productData) {
       return res.status(404).json({
         success: false,
-        message: "상품을 찾을 수 없습니다",
+        message: "Không tìm thấy sản phẩm",
       });
     }
 
@@ -147,7 +147,7 @@ export default async function handler(req, res) {
     if (productData.user_id !== userId) {
       return res.status(403).json({
         success: false,
-        message: "자신의 상품만 삭제할 수 있습니다",
+        message: "Bạn chỉ có thể xóa sản phẩm của mình",
       });
     }
 
@@ -164,7 +164,7 @@ export default async function handler(req, res) {
       console.error("상품 삭제 오류:", deleteError);
       return res.status(500).json({
         success: false,
-        message: "상품 삭제 중 오류가 발생했습니다",
+        message: "Đã xảy ra lỗi khi xóa sản phẩm",
         error: deleteError.message,
       });
     }
@@ -185,14 +185,14 @@ export default async function handler(req, res) {
 
     return res.status(200).json({
       success: true,
-      message: "상품이 성공적으로 삭제되었습니다",
+      message: "Sản phẩm đã được xóa thành công",
       data: deleteData,
     });
   } catch (error) {
-    console.error("서버 오류:", error);
+    console.error("Đã xảy ra lỗi máy chủ", error);
     return res.status(500).json({
       success: false,
-      message: "서버 오류가 발생했습니다",
+      message: "Đã xảy ra lỗi máy chủ",
       error: error.message,
     });
   }

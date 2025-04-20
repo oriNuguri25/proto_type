@@ -51,13 +51,11 @@ export const useProductEdit = (productId, uploadImages, validateImages) => {
           data = JSON.parse(responseText);
         } catch (err) {
           console.error("응답이 유효한 JSON이 아닙니다:", err);
-          throw new Error("서버에서 유효하지 않은 응답을 받았습니다");
+          throw new Error("Nhận được phản hồi không hợp lệ từ máy chủ");
         }
 
         if (!response.ok) {
-          throw new Error(
-            data.message || "상품 정보를 불러오는데 실패했습니다."
-          );
+          throw new Error(data.message || "Không thể tải thông tin sản phẩm.");
         }
 
         setProduct(data.product);
@@ -72,7 +70,11 @@ export const useProductEdit = (productId, uploadImages, validateImages) => {
         });
       } catch (err) {
         console.error("상품 정보 로드 오류:", err);
-        setError(err.message);
+        setError(
+          err.message === "서버에서 유효하지 않은 응답을 받았습니다"
+            ? "Nhận được phản hồi không hợp lệ từ máy chủ"
+            : err.message
+        );
       } finally {
         setIsLoading(false);
       }
@@ -113,7 +115,7 @@ export const useProductEdit = (productId, uploadImages, validateImages) => {
       // JWT 토큰 가져오기
       const token = getToken();
       if (!token) {
-        setError("로그인이 필요합니다.");
+        setError("Vui lòng đăng nhập để tiếp tục.");
         setIsSubmitting(false);
         return false;
       }
@@ -147,7 +149,7 @@ export const useProductEdit = (productId, uploadImages, validateImages) => {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || "상품 업데이트에 실패했습니다");
+        throw new Error(data.message || "Cập nhật sản phẩm thất bại");
       }
 
       console.log("상품 업데이트 성공:", data);

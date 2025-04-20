@@ -2,7 +2,6 @@
   max-width: 1280px;
   margin: 0 auto;
   padding: 2rem;
-  text-align: center;
 }
 
 .logo {
@@ -39,4 +38,29 @@
 
 .read-the-docs {
   color: #888;
+}
+
+/* 토스트 관련 커스텀 스타일 */
+.custom-toast {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* 토스트 컨테이너에 대한 스타일 */
+[data-sonner-toaster] {
+  --offset: 1.5rem;
+  --width: 400px;
+  --height: auto;
+}
+
+/* 토스트 아이콘 크기 조정 */
+[data-sonner-toast] [data-icon] {
+  transform: scale(1.2);
+}
+
+/* 토스트 기본 스타일 변수 */
+:root {
+  --toast-font-size: 1rem;
+  --toast-padding: 16px;
+  --toast-width: 400px;
+  --toast-border-radius: 8px;
 }

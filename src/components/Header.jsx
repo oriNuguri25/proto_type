@@ -47,7 +47,8 @@ const Header = ({ navigate }) => {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48">
-                  <DropdownMenuItem asChild>
+                  {/* 유저 프로필 관리는 나중에... */}
+                  {/* <DropdownMenuItem asChild>
                     <Link
                       to="/my-profile"
                       className="flex-cursor-pointer items-center"
@@ -56,7 +57,7 @@ const Header = ({ navigate }) => {
                       <span>Tài khoản của tôi</span>
                     </Link>
                   </DropdownMenuItem>
-                  <DropdownMenuSeparator />
+                  <DropdownMenuSeparator /> */}
                   <DropdownMenuItem asChild>
                     <Link
                       to="/my-products"

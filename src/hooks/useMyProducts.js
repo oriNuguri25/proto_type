@@ -20,7 +20,7 @@ export const useMyProducts = () => {
         const token = getToken();
 
         if (!token) {
-          setError(new Error("로그인이 필요합니다."));
+          setError(new Error("Vui lòng đăng nhập để tiếp tục."));
           setLoading(false);
           return;
         }
@@ -29,7 +29,7 @@ export const useMyProducts = () => {
         const userData = getUserFromToken(token);
 
         if (!userData || !userData.id) {
-          setError(new Error("사용자 정보를 가져올 수 없습니다."));
+          setError(new Error("Không thể lấy thông tin người dùng."));
           setLoading(false);
           return;
         }
@@ -61,7 +61,7 @@ export const useMyProducts = () => {
     try {
       const token = getToken();
       if (!token) {
-        throw new Error("인증 정보가 필요합니다");
+        throw new Error("Cần xác thực để thực hiện thao tác này");
       }
 
       // 서버 API를 통해 상태 업데이트 (SERVICE_ROLE_KEY 사용)
@@ -80,7 +80,7 @@ export const useMyProducts = () => {
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.message || "상태 변경 실패");
+        throw new Error(result.message || "Thay đổi trạng thái thất bại");
       }
 
       console.log(`Supabase 업데이트 성공:`, result);
@@ -111,7 +111,7 @@ export const useMyProducts = () => {
         console.error("토큰이 없어 삭제할 수 없습니다.");
         return {
           success: false,
-          error: { message: "인증 정보가 없습니다. 로그인이 필요합니다." },
+          error: { message: "Cần đăng nhập để thực hiện thao tác này." },
         };
       }
 
@@ -129,7 +129,7 @@ export const useMyProducts = () => {
 
       if (!response.ok) {
         console.error("서버 삭제 오류:", result);
-        throw new Error(result.message || "상품 삭제 실패");
+        throw new Error(result.message || "Xóa sản phẩm thất bại");
       }
 
       console.log("서버 삭제 응답:", result);

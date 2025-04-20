@@ -6,9 +6,25 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import MainLayout from "@/components/MainLayout";
 
+// 날짜를 YYYY-MM-DD 형식으로 변환하는 함수
+const formatDate = (dateString) => {
+  if (!dateString) return "N/A";
+  const date = new Date(dateString);
+  return date.toISOString().split("T")[0]; // YYYY-MM-DD 형식
+};
+
+// 두 날짜가 같은지 비교하는 함수
+const areDatesEqual = (date1, date2) => {
+  if (!date1 || !date2) return false;
+  return formatDate(date1) === formatDate(date2);
+};
+
 const ProductHero = ({ product }) => {
   const [selectedImage, setSelectedImage] = useState(0);
   const imageUrls = getImageUrlsArray(product.image_urls);
+
+  // 생성일과 수정일이 같은지 확인
+  const datesAreEqual = areDatesEqual(product.created_at, product.updated_at);
 
   return (
     <MainLayout>
@@ -80,6 +96,12 @@ const ProductHero = ({ product }) => {
                 <p className="mt-1 text-sm text-gray-500">
                   {getDaysAgo(product.created_at)} ngày trước
                 </p>
+                {/* 수정일 표시 (생성일과 다를 때만) */}
+                {!datesAreEqual && (
+                  <p className="text-sm text-gray-500">
+                    Chỉnh sửa: {formatDate(product.updated_at)}
+                  </p>
+                )}
               </div>
 
               {/* 구매 문의 버튼 */}
