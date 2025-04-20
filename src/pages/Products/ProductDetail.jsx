@@ -1,11 +1,32 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { useProduct } from "@/hooks/useProduct";
 import ProductHero from "./ProductHero";
+import { Toaster, toast } from "sonner";
 
 const ProductDetail = () => {
   const { id } = useParams();
   const { product, loading, error } = useProduct(id);
+
+  useEffect(() => {
+    // 상품 수정 성공 메시지 표시
+    const productUpdated = sessionStorage.getItem("productUpdated");
+    if (productUpdated === "true") {
+      toast.success("Sản phẩm đã được cập nhật thành công.", {
+        duration: 3000,
+        position: "bottom-right",
+        style: {
+          fontSize: "1.1rem",
+          padding: "16px",
+          fontWeight: "500",
+        },
+        className: "custom-toast",
+      });
+
+      // 표시 후 상태 제거
+      sessionStorage.removeItem("productUpdated");
+    }
+  }, []);
 
   // 로딩 중 표시
   if (loading) {
@@ -47,7 +68,12 @@ const ProductDetail = () => {
     );
   }
 
-  return <ProductHero product={product} />;
+  return (
+    <>
+      <ProductHero product={product} />
+      <Toaster richColors />
+    </>
+  );
 };
 
 export default ProductDetail;

@@ -172,5 +172,6 @@ export const useImageUpload = () => {
     uploadImages,
     validateImages,
     setImageError,
+    setImagePreviewUrls,
   };
 };

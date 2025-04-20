@@ -55,7 +55,7 @@ const Main = () => {
       <Toaster richColors className="toaster-large" style={toastStyle} />
 
       {/* 토스트 스타일 정의 */}
-      <style jsx global>{`
+      <style jsx="true" global="true">{`
         .custom-toast {
           box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
         }
