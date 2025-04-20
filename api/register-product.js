@@ -34,6 +34,7 @@ const getUserIdFromToken = (token) => {
     }
 
     console.log("토큰 파싱 시작");
+    console.log("받은 토큰 (일부):", token.substring(0, 10) + "...");
 
     // JWT 구조: header.payload.signature
     const parts = token.split(".");
@@ -48,11 +49,15 @@ const getUserIdFromToken = (token) => {
       "="
     );
     const decodedPayload = Buffer.from(paddedPayload, "base64").toString();
+    console.log("디코딩된 페이로드:", decodedPayload);
 
     const userData = JSON.parse(decodedPayload);
+    console.log("파싱된 사용자 데이터:", userData);
 
     // JWT 표준 필드 및 Supabase 필드 확인
-    const userId = userData.sub || userData.user_id || userData.id;
+    // 가능한 모든 ID 필드를 확인
+    const userId =
+      userData.sub || userData.user_id || userData.id || userData.userId;
 
     console.log("추출된 사용자 ID:", userId);
     return userId;
@@ -100,6 +105,8 @@ export default async function handler(req, res) {
       });
     }
 
+    console.log("수신된 인증 헤더:", token.substring(0, 15) + "...");
+
     // 토큰에서 사용자 ID 추출
     const userId = getUserIdFromToken(token);
     if (!userId) {
@@ -109,18 +116,38 @@ export default async function handler(req, res) {
       });
     }
 
+    console.log("토큰에서 추출한 사용자 ID:", userId);
+
     // profiles 테이블에서 사용자 확인
     const { data: userProfile, error: profileError } = await supabase
       .from("profiles")
-      .select("id")
+      .select("id, nickname")
       .eq("id", userId)
       .single();
 
-    if (profileError || !userProfile) {
-      console.error(
-        "사용자 프로필 조회 오류:",
-        profileError || "사용자를 찾을 수 없음"
+    if (profileError) {
+      console.error("사용자 프로필 조회 오류:", profileError);
+      return res.status(401).json({
+        success: false,
+        message: "사용자 프로필 조회 오류",
+        detail: profileError.message,
+      });
+    }
+
+    if (!userProfile) {
+      console.error("사용자 프로필을 찾을 수 없음. ID:", userId);
+
+      // 프로필 테이블의 모든 ID를 가져와 디버깅 (개발 환경에서만 사용)
+      const { data: allProfiles } = await supabase
+        .from("profiles")
+        .select("id")
+        .limit(5);
+
+      console.log(
+        "프로필 테이블의 일부 ID 샘플:",
+        allProfiles?.map((p) => p.id)
       );
+
       return res.status(401).json({
         success: false,
         message: "사용자 프로필을 찾을 수 없습니다",
@@ -128,7 +155,12 @@ export default async function handler(req, res) {
       });
     }
 
-    console.log("사용자 프로필 확인 완료:", userProfile.id);
+    console.log(
+      "사용자 프로필 확인 완료:",
+      userProfile.id,
+      "닉네임:",
+      userProfile.nickname
+    );
 
     const productData = req.body;
     console.log("요청 데이터:", productData);
@@ -177,10 +209,11 @@ export default async function handler(req, res) {
     // 상품 데이터 구성
     const newProduct = {
       user_id: userProfile.id, // 확인된 프로필 ID 사용
+      user_nickname: userProfile.nickname, // 사용자 닉네임 추가
       product_name: productData.product_name,
       description: productData.description,
       price: Number(productData.price),
-      purchase_link: productData.purchase_link || "",
+      purchase_link: productData.purchase_link,
       image_urls: productData.image_urls,
     };
 

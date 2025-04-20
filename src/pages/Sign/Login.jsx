@@ -4,8 +4,11 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useLoginSubmit } from "./hooks/useLoginSubmit";
+import { Eye, EyeOff } from "lucide-react";
+import { usePasswordVisibility } from "@/hooks/usePasswordVisibility";
 
 const Login = () => {
+  const { showPassword, togglePasswordVisibility } = usePasswordVisibility();
   const {
     formData,
     isLoading,
@@ -55,14 +58,28 @@ const Login = () => {
 
             <div className="space-y-2">
               <Label htmlFor="password">Mật khẩu</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="Nhập mật khẩu"
-                value={formData.password}
-                onChange={handleChange}
-                className={formErrors.password ? "border-red-500" : ""}
-              />
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Nhập mật khẩu"
+                  value={formData.password}
+                  onChange={handleChange}
+                  className={formErrors.password ? "border-red-500" : ""}
+                />
+                <button
+                  type="button"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                  onClick={togglePasswordVisibility}
+                  tabIndex="-1"
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                </button>
+              </div>
               {formErrors.password && (
                 <p className="text-sm text-red-500 mt-1">
                   {formErrors.password}

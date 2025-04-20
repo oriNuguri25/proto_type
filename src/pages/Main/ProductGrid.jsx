@@ -133,8 +133,9 @@ const ProductGrid = () => {
           to={`/products/${product.id}`}
           key={product.id}
           onClick={(e) => handleProductClick(e, product.id)}
+          className="h-full"
         >
-          <Card className="card-hover">
+          <Card className="card-hover h-full flex flex-col">
             <div className="relative aspect-square w-full overflow-hidden bg-gray-100">
               <img
                 src={getImageUrl(product.image_urls)}
@@ -152,10 +153,13 @@ const ProductGrid = () => {
                 </div>
               )}
             </div>
-            <CardContent className="p-3">
-              <h3 className="line-clamp-2 min-h-[2.5rem] text-sm font-medium text-gray-800">
+            <CardContent className="p-3 flex-1 flex flex-col">
+              <h3 className="line-clamp-2 h-10 text-sm font-medium text-gray-800">
                 {product.product_name}
               </h3>
+              <p className="mt-0.5 text-xs text-gray-500 h-4 overflow-hidden">
+                {product.user_nickname || ""}
+              </p>
               <div className="mt-1 flex items-center justify-between">
                 <p className="text-base font-bold text-blue-600">
                   {product.price?.toLocaleString() || 0} VNĐ

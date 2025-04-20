@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { useValidation } from "@/hooks/useValidation";
 import { useSignupSubmit } from "./hooks/useSignupSubmit";
+import { PasswordInput } from "./password-input";
 
 const Signup = () => {
   const { checkEmailExists, checkNicknameExists } = useValidation();
