@@ -97,7 +97,7 @@ export const useProductSubmit = (uploadImages, validateImages) => {
     // 이미지 유효성 검사
     if (!validateImages()) {
       setError("Vui lòng điền đầy đủ tất cả các trường bắt buộc.");
-      return;
+      return false;
     }
 
     setIsSubmitting(true);
@@ -112,14 +112,12 @@ export const useProductSubmit = (uploadImages, validateImages) => {
       const result = await submitProduct(formData, imageUrls);
       console.log("상품 등록 결과:", result);
 
-      // 성공 메시지 표시
-      alert("상품이 성공적으로 등록되었습니다!");
-
-      // 상품 목록 페이지로 이동
-      navigate("/?status=success", { replace: true });
+      // 성공 시 true 반환
+      return true;
     } catch (error) {
       console.error("상품 등록 오류:", error);
       setError(error.message || "상품 등록 중 오류가 발생했습니다.");
+      return false;
     } finally {
       setIsSubmitting(false);
     }

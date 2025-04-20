@@ -7,8 +7,11 @@ import { Button } from "../../components/ui/button";
 import { formatNumber } from "@/lib/utils";
 import { useImageUpload } from "./hooks/useImageUpload";
 import { useProductSubmit } from "./hooks/useProductSubmit";
+import { useNavigate } from "react-router-dom";
 
 const RegisterForm = () => {
+  const navigate = useNavigate();
+
   // 폼 상태 관리
   const [formData, setFormData] = useState({
     product_name: "",
@@ -65,8 +68,15 @@ const RegisterForm = () => {
   };
 
   // 폼 제출 이벤트 처리 래퍼
-  const onSubmit = (e) => {
-    submitProduct(e, formData);
+  const onSubmit = async (e) => {
+    e.preventDefault();
+    const success = await submitProduct(e, formData);
+
+    if (success) {
+      // URL 파라미터 대신 sessionStorage 사용
+      sessionStorage.setItem("productRegistered", "true");
+      navigate("/", { replace: true });
+    }
   };
 
   return (
