@@ -50,18 +50,27 @@ export const useProductSubmit = (uploadImages, validateImages) => {
       if (!response.ok) {
         let errorMessage = "상품 등록 중 오류가 발생했습니다";
 
-        try {
-          // 응답이 JSON인 경우에만 파싱 시도
-          if (
-            responseText.trim().startsWith("{") &&
-            responseText.trim().endsWith("}")
-          ) {
-            const errorData = JSON.parse(responseText);
-            errorMessage = errorData.error || errorData.message || errorMessage;
-            console.error("서버 오류 상세 정보:", errorData);
+        // 500번대 에러 체크
+        if (response.status >= 500) {
+          errorMessage = "Vui lòng thử lại một lần nữa."; // 베트남어로 "한번 더 시도하세요"
+          console.error(
+            `서버 오류 (${response.status}): 사용자에게 재시도 요청`
+          );
+        } else {
+          try {
+            // 응답이 JSON인 경우에만 파싱 시도
+            if (
+              responseText.trim().startsWith("{") &&
+              responseText.trim().endsWith("}")
+            ) {
+              const errorData = JSON.parse(responseText);
+              errorMessage =
+                errorData.error || errorData.message || errorMessage;
+              console.error("서버 오류 상세 정보:", errorData);
+            }
+          } catch (e) {
+            console.error("응답 파싱 오류:", e);
           }
-        } catch (e) {
-          console.error("응답 파싱 오류:", e);
         }
 
         throw new Error(errorMessage);
@@ -116,7 +125,24 @@ export const useProductSubmit = (uploadImages, validateImages) => {
       return true;
     } catch (error) {
       console.error("상품 등록 오류:", error);
-      setError(error.message || "상품 등록 중 오류가 발생했습니다.");
+
+      // 에러 메시지가 베트남어로 되어 있으면 그대로 표시
+      if (error.message.includes("Vui lòng")) {
+        setError(error.message);
+      } else {
+        // 504 등 네트워크 타임아웃 에러나 500번대 에러 처리
+        if (
+          error.message.includes("504") ||
+          error.message.includes("500") ||
+          error.message.includes("timeout") ||
+          error.message.includes("네트워크")
+        ) {
+          setError("Vui lòng thử lại một lần nữa."); // 베트남어로 "한번 더 시도하세요"
+        } else {
+          setError(error.message || "상품 등록 중 오류가 발생했습니다.");
+        }
+      }
+
       return false;
     } finally {
       setIsSubmitting(false);
