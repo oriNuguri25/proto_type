@@ -209,7 +209,10 @@ export default async function handler(req, res) {
           purchase_link: productData.purchase_link,
         }),
         ...(productData.image_urls && { image_urls: productData.image_urls }),
-        updated_at: new Date().toISOString(), // 수정 시간 업데이트
+        // 한국 시간(KST, UTC+9)으로 업데이트 시간 설정
+        updated_at: new Date(
+          new Date().getTime() + 9 * 60 * 60 * 1000
+        ).toISOString(),
       };
 
       console.log("업데이트할 데이터:", updateData);

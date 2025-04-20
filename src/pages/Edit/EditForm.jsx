@@ -95,9 +95,9 @@ const EditForm = ({ productId }) => {
     const success = await updateProduct(e, formData, imageUrls);
 
     if (success) {
-      // 수정 성공 시 상품 상세 페이지로 이동
+      // 수정 성공 시 메인 페이지로 이동하고 뒤로가기 방지
       sessionStorage.setItem("productUpdated", "true");
-      navigate(`/products/${productId}`, { replace: true });
+      navigate("/", { replace: true }); // replace: true로 설정하여 히스토리를 대체함으로써 뒤로가기 방지
     }
   };
 

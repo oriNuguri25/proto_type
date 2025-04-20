@@ -20,10 +20,8 @@ const Main = () => {
     // URL 파라미터 체크 (이전 방식)
     const params = new URLSearchParams(location.search);
 
-    // 1. sessionStorage에서 상품 등록 상태 확인
+    // 1. 상품 등록 성공 메시지 표시
     const productRegistered = sessionStorage.getItem("productRegistered");
-
-    // 2. 상태가 있다면 토스트 표시 후 상태 제거
     if (productRegistered === "true") {
       toast.success("Sản phẩm đã được đăng thành công.", {
         duration: 3000,
@@ -38,6 +36,24 @@ const Main = () => {
 
       // 표시 후 상태 제거
       sessionStorage.removeItem("productRegistered");
+    }
+
+    // 2. 상품 수정 성공 메시지 표시
+    const productUpdated = sessionStorage.getItem("productUpdated");
+    if (productUpdated === "true") {
+      toast.success("Sản phẩm đã được cập nhật thành công.", {
+        duration: 3000,
+        position: "bottom-right",
+        style: {
+          fontSize: "1.1rem",
+          padding: "16px",
+          fontWeight: "500",
+        },
+        className: "custom-toast",
+      });
+
+      // 표시 후 상태 제거
+      sessionStorage.removeItem("productUpdated");
     }
 
     // 3. URL 파라미터로 접근한 경우(이전 코드 호환성) URL 클리닝
