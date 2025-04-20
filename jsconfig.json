@@ -5,5 +5,11 @@
       "@/*": ["public/src/*"]
     }
   },
-  "include": ["public/src", "api", "src/components/ui/textarea.jsx"]
+  "include": [
+    "public/src",
+    "api",
+    "src/components/ui/textarea.jsx",
+    "src/components/ui/sonner.jsx",
+    "src/components/ui/select.jsx"
+  ]
 }
