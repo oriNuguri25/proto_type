@@ -19,6 +19,94 @@ const supabase = createClient(
   }
 );
 
+// 이미지 URL에서 스토리지 파일 경로 추출
+const getStoragePathFromUrl = (imageUrl) => {
+  try {
+    if (!imageUrl) return null;
+
+    // 스토리지 버킷과 경로 추출
+    // 예: https://xyz.supabase.co/storage/v1/object/public/product-images/1234567890.jpg
+    // -> product-images/1234567890.jpg
+    const urlParts = imageUrl.split("/");
+    const bucketIndex = urlParts.findIndex((part) => part === "public");
+
+    if (bucketIndex === -1 || bucketIndex >= urlParts.length - 1) {
+      console.error("이미지 URL 형식이 예상과 다릅니다:", imageUrl);
+      return null;
+    }
+
+    // 버킷 이름과 파일 경로 추출
+    const bucketName = urlParts[bucketIndex + 1];
+    const filePath = urlParts.slice(bucketIndex + 2).join("/");
+
+    console.log(`추출된 정보 - 버킷: ${bucketName}, 파일 경로: ${filePath}`);
+    return { bucketName, filePath };
+  } catch (error) {
+    console.error("이미지 URL 파싱 오류:", error);
+    return null;
+  }
+};
+
+// 스토리지에서 이미지 삭제
+const deleteImagesFromStorage = async (imageUrls) => {
+  if (!imageUrls || !Array.isArray(imageUrls) || imageUrls.length === 0) {
+    console.log("삭제할 이미지가 없습니다.");
+    return { success: true, deletedCount: 0 };
+  }
+
+  console.log(`총 ${imageUrls.length}개 이미지 삭제 시도...`);
+  let successCount = 0;
+  let errorCount = 0;
+
+  for (const imageUrl of imageUrls) {
+    try {
+      const storageInfo = getStoragePathFromUrl(imageUrl);
+
+      if (!storageInfo || !storageInfo.bucketName || !storageInfo.filePath) {
+        console.warn("스토리지 경로를 추출할 수 없습니다:", imageUrl);
+        errorCount++;
+        continue;
+      }
+
+      console.log(
+        `이미지 삭제 시도: ${storageInfo.bucketName}/${storageInfo.filePath}`
+      );
+
+      // 스토리지에서 파일 삭제
+      const { error } = await supabase.storage
+        .from(storageInfo.bucketName)
+        .remove([storageInfo.filePath]);
+
+      if (error) {
+        console.error(`이미지 삭제 오류 (${imageUrl}):`, error);
+        errorCount++;
+      } else {
+        console.log(`이미지 삭제 성공: ${imageUrl}`);
+        successCount++;
+      }
+    } catch (error) {
+      console.error(`이미지 삭제 중 예외 발생 (${imageUrl}):`, error);
+      errorCount++;
+    }
+  }
+
+  console.log(`이미지 삭제 결과: 성공 ${successCount}개, 실패 ${errorCount}개`);
+  return {
+    success: errorCount === 0,
+    deletedCount: successCount,
+    errorCount,
+  };
+};
+
+// 두 이미지 배열을 비교하여 삭제된 이미지 URL을 찾는 함수
+const findRemovedImages = (originalUrls, newUrls) => {
+  if (!originalUrls || !Array.isArray(originalUrls)) return [];
+  if (!newUrls || !Array.isArray(newUrls)) return [...originalUrls];
+
+  // 원본 배열에는 있지만 새 배열에는 없는 URL 찾기
+  return originalUrls.filter((url) => !newUrls.includes(url));
+};
+
 // JWT 토큰에서 사용자 ID 추출
 const getUserIdFromToken = (token) => {
   try {
@@ -162,10 +250,41 @@ export default async function handler(req, res) {
         });
       }
 
+      // 필수 필드 확인
+      const requiredFields = [
+        "product_name",
+        "description",
+        "price",
+        "purchase_link",
+      ];
+      const missingFields = requiredFields.filter(
+        (field) =>
+          !productData[field] || productData[field].toString().trim() === ""
+      );
+
+      if (missingFields.length > 0) {
+        return res.status(400).json({
+          success: false,
+          message: `다음 필드가 누락되었습니다: ${missingFields.join(", ")}`,
+        });
+      }
+
+      // 이미지 존재 확인
+      if (
+        !productData.image_urls ||
+        !Array.isArray(productData.image_urls) ||
+        productData.image_urls.length === 0
+      ) {
+        return res.status(400).json({
+          success: false,
+          message: "최소 한 개 이상의 이미지가 필요합니다",
+        });
+      }
+
       // 상품 정보 확인 (본인 상품인지 검증)
       const { data: existingProduct, error: productError } = await supabase
         .from("products")
-        .select("id, user_id")
+        .select("id, user_id, image_urls")
         .eq("id", productId)
         .single();
 
@@ -191,6 +310,24 @@ export default async function handler(req, res) {
           success: false,
           message: "자신의 상품만 수정할 수 있습니다",
         });
+      }
+
+      // 삭제된 이미지 확인
+      const originalImageUrls = existingProduct.image_urls || [];
+      const newImageUrls = productData.image_urls || [];
+      const removedImageUrls = findRemovedImages(
+        originalImageUrls,
+        newImageUrls
+      );
+
+      // 삭제된 이미지가 있다면 스토리지에서 제거
+      let imageDeleteResult = { deletedCount: 0 };
+      if (removedImageUrls.length > 0) {
+        console.log(
+          `${removedImageUrls.length}개의 이미지가 삭제되었습니다. 스토리지에서 제거 시도...`
+        );
+        imageDeleteResult = await deleteImagesFromStorage(removedImageUrls);
+        console.log("이미지 삭제 결과:", imageDeleteResult);
       }
 
       // 업데이트할 필드 구성
@@ -238,7 +375,13 @@ export default async function handler(req, res) {
       return res.status(200).json({
         success: true,
         message: "상품 정보가 성공적으로 업데이트되었습니다",
-        product: updatedProduct[0],
+        product: {
+          ...updatedProduct[0],
+          imageDeleteInfo: {
+            removedImages: removedImageUrls.length,
+            deletedFromStorage: imageDeleteResult.deletedCount,
+          },
+        },
       });
     } catch (error) {
       console.error("서버 오류:", error);

@@ -19,6 +19,34 @@ const supabase = createClient(
   }
 );
 
+// 이미지 URL에서 스토리지 파일 경로 추출
+const getStoragePathFromUrl = (imageUrl) => {
+  try {
+    if (!imageUrl) return null;
+
+    // 스토리지 버킷과 경로 추출
+    // 예: https://xyz.supabase.co/storage/v1/object/public/product-images/1234567890.jpg
+    // -> product-images/1234567890.jpg
+    const urlParts = imageUrl.split("/");
+    const bucketIndex = urlParts.findIndex((part) => part === "public");
+
+    if (bucketIndex === -1 || bucketIndex >= urlParts.length - 1) {
+      console.error("이미지 URL 형식이 예상과 다릅니다:", imageUrl);
+      return null;
+    }
+
+    // 버킷 이름과 파일 경로 추출
+    const bucketName = urlParts[bucketIndex + 1];
+    const filePath = urlParts.slice(bucketIndex + 2).join("/");
+
+    console.log(`추출된 정보 - 버킷: ${bucketName}, 파일 경로: ${filePath}`);
+    return { bucketName, filePath };
+  } catch (error) {
+    console.error("이미지 URL 파싱 오류:", error);
+    return null;
+  }
+};
+
 // JWT 토큰에서 사용자 ID 추출
 const getUserIdFromToken = (token) => {
   try {
@@ -58,6 +86,57 @@ const getUserIdFromToken = (token) => {
     console.error("토큰 파싱 오류:", error);
     return null;
   }
+};
+
+// 스토리지에서 이미지 삭제
+const deleteImagesFromStorage = async (imageUrls) => {
+  if (!imageUrls || !Array.isArray(imageUrls) || imageUrls.length === 0) {
+    console.log("삭제할 이미지가 없습니다.");
+    return { success: true, deletedCount: 0 };
+  }
+
+  console.log(`총 ${imageUrls.length}개 이미지 삭제 시도...`);
+  let successCount = 0;
+  let errorCount = 0;
+
+  for (const imageUrl of imageUrls) {
+    try {
+      const storageInfo = getStoragePathFromUrl(imageUrl);
+
+      if (!storageInfo || !storageInfo.bucketName || !storageInfo.filePath) {
+        console.warn("스토리지 경로를 추출할 수 없습니다:", imageUrl);
+        errorCount++;
+        continue;
+      }
+
+      console.log(
+        `이미지 삭제 시도: ${storageInfo.bucketName}/${storageInfo.filePath}`
+      );
+
+      // 스토리지에서 파일 삭제
+      const { error } = await supabase.storage
+        .from(storageInfo.bucketName)
+        .remove([storageInfo.filePath]);
+
+      if (error) {
+        console.error(`이미지 삭제 오류 (${imageUrl}):`, error);
+        errorCount++;
+      } else {
+        console.log(`이미지 삭제 성공: ${imageUrl}`);
+        successCount++;
+      }
+    } catch (error) {
+      console.error(`이미지 삭제 중 예외 발생 (${imageUrl}):`, error);
+      errorCount++;
+    }
+  }
+
+  console.log(`이미지 삭제 결과: 성공 ${successCount}개, 실패 ${errorCount}개`);
+  return {
+    success: errorCount === 0,
+    deletedCount: successCount,
+    errorCount,
+  };
 };
 
 export default async function handler(req, res) {
@@ -123,7 +202,7 @@ export default async function handler(req, res) {
     // 상품 정보 확인 (본인 상품인지 검증)
     const { data: productData, error: productError } = await supabase
       .from("products")
-      .select("id, user_id")
+      .select("id, user_id, image_urls")
       .eq("id", productId)
       .single();
 
@@ -152,6 +231,13 @@ export default async function handler(req, res) {
     }
 
     console.log(`상품 ID ${productId} 삭제 시작...`);
+
+    // 스토리지에서 이미지 삭제
+    const imageUrls = productData.image_urls || [];
+    console.log(`상품에 연결된 이미지 URL ${imageUrls.length}개 발견`);
+
+    const imageDeleteResult = await deleteImagesFromStorage(imageUrls);
+    console.log("이미지 삭제 결과:", imageDeleteResult);
 
     // SERVICE_ROLE_KEY를 사용하여 상품 삭제
     const { data: deleteData, error: deleteError } = await supabase
@@ -186,7 +272,13 @@ export default async function handler(req, res) {
     return res.status(200).json({
       success: true,
       message: "Sản phẩm đã được xóa thành công",
-      data: deleteData,
+      data: {
+        ...deleteData[0],
+        imageDeleteInfo: {
+          totalImages: imageUrls.length,
+          deletedImages: imageDeleteResult.deletedCount,
+        },
+      },
     });
   } catch (error) {
     console.error("Đã xảy ra lỗi máy chủ", error);

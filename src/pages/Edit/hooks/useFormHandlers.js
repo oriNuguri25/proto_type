@@ -62,10 +62,52 @@ export const useFormHandlers = (
     [handleFileSelect, setError]
   );
 
+  // 폼 유효성 검사
+  const validateForm = useCallback(() => {
+    // 필수 필드 검증
+    if (!formData.product_name || formData.product_name.trim() === "") {
+      setError("Vui lòng nhập tên sản phẩm.");
+      return false;
+    }
+
+    if (!formData.description || formData.description.trim() === "") {
+      setError("Vui lòng nhập mô tả sản phẩm.");
+      return false;
+    }
+
+    if (!formData.price || formData.price.trim() === "") {
+      setError("Vui lòng nhập giá sản phẩm.");
+      return false;
+    }
+
+    if (!formData.purchase_link || formData.purchase_link.trim() === "") {
+      setError("Vui lòng nhập liên kết mua hàng.");
+      return false;
+    }
+
+    // 이미지가 변경되지 않았으면 기존 이미지 URLs 사용
+    const useExistingImages =
+      imageFiles.length === 0 && initialImageUrls.length > 0;
+
+    // 이미지가 없는 경우 검증
+    if (!useExistingImages && imageFiles.length === 0) {
+      setError("Vui lòng tải lên ít nhất một hình ảnh.");
+      return false;
+    }
+
+    return true;
+  }, [formData, imageFiles, initialImageUrls, setError]);
+
   // 폼 제출 이벤트 처리
   const onSubmit = useCallback(
     async (e) => {
+      e.preventDefault();
       setFormSubmitted(true);
+
+      // 폼 유효성 검사
+      if (!validateForm()) {
+        return false;
+      }
 
       // 이미지가 변경되지 않았으면 기존 이미지 URLs 사용
       const useExistingImages =
@@ -80,7 +122,14 @@ export const useFormHandlers = (
         navigate("/", { replace: true }); // replace: true로 설정하여 히스토리를 대체함으로써 뒤로가기 방지
       }
     },
-    [formData, imageFiles, initialImageUrls, updateProduct, navigate]
+    [
+      formData,
+      imageFiles,
+      initialImageUrls,
+      updateProduct,
+      navigate,
+      validateForm,
+    ]
   );
 
   // 취소 버튼 처리
