@@ -135,10 +135,28 @@ export const useProductEdit = (productId, uploadImages, validateImages) => {
       }
 
       // 이미지가 없는 경우 오류 처리
-      if (finalImageUrls.length === 0) {
-        setError("Vui lòng tải lên ít nhất một hình ảnh.");
+      if (!finalImageUrls || finalImageUrls.length === 0) {
+        setError(
+          "Vui lòng tải lên ít nhất một hình ảnh (최소 한 개 이상의 이미지를 업로드해주세요)."
+        );
         setIsSubmitting(false);
         return false;
+      }
+
+      // 필수 필드 검사 (추가 검증)
+      const requiredFields = [
+        { field: "product_name", label: "상품명" },
+        { field: "description", label: "상품 설명" },
+        { field: "price", label: "가격" },
+        { field: "purchase_link", label: "구매 링크" },
+      ];
+
+      for (const { field, label } of requiredFields) {
+        if (!formData[field] || formData[field].toString().trim() === "") {
+          setError(`${label}을(를) 입력해주세요.`);
+          setIsSubmitting(false);
+          return false;
+        }
       }
 
       // JWT 토큰 가져오기

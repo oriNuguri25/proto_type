@@ -65,43 +65,46 @@ export const useFormHandlers = (
 
   // 폼 유효성 검사
   const validateForm = useCallback(() => {
+    // 모든 필수 필드를 검사하는 객체
+    const requiredFields = {
+      product_name: {
+        value: formData.product_name,
+        message: "Vui lòng nhập tên sản phẩm (상품명을 입력해주세요).",
+      },
+      description: {
+        value: formData.description,
+        message: "Vui lòng nhập mô tả sản phẩm (상품 설명을 입력해주세요).",
+      },
+      price: {
+        value: formData.price,
+        message: "Vui lòng nhập giá sản phẩm (가격을 입력해주세요).",
+      },
+      purchase_link: {
+        value: formData.purchase_link,
+        message: "Vui lòng nhập liên kết mua hàng (구매 링크를 입력해주세요).",
+      },
+    };
+
     // 필수 필드 검증
-    if (!formData.product_name || formData.product_name.trim() === "") {
-      setError("Vui lòng nhập tên sản phẩm.");
-      return false;
-    }
-
-    if (!formData.description || formData.description.trim() === "") {
-      setError("Vui lòng nhập mô tả sản phẩm.");
-      return false;
-    }
-
-    if (!formData.price || formData.price.trim() === "") {
-      setError("Vui lòng nhập giá sản phẩm.");
-      return false;
-    }
-
-    if (!formData.purchase_link || formData.purchase_link.trim() === "") {
-      setError("Vui lòng nhập liên kết mua hàng.");
-      return false;
+    for (const [field, data] of Object.entries(requiredFields)) {
+      if (!data.value || data.value.toString().trim() === "") {
+        setError(data.message);
+        return false;
+      }
     }
 
     // 이미지 삭제 여부 확인
     const wasImageRemoved = window.imageRemoved === true;
 
-    // 이미지가 변경되지 않았으면 기존 이미지 URLs 사용
-    const useExistingImages =
-      !wasImageRemoved &&
-      imageFiles.length === 0 &&
-      initialImageUrls.length > 0;
+    // 이미지 검증 (최소 1개 이상의 이미지 필요)
+    const hasNewImages = imageFiles.length > 0;
+    const hasExistingImages = initialImageUrls.length > 0 && !wasImageRemoved;
+    const hasPreviewImages = imagePreviewUrls.length > 0;
 
-    // 이미지가 없는 경우 검증
-    if (
-      !useExistingImages &&
-      imageFiles.length === 0 &&
-      imagePreviewUrls.length === 0
-    ) {
-      setError("Vui lòng tải lên ít nhất một hình ảnh.");
+    if (!hasNewImages && !hasExistingImages && !hasPreviewImages) {
+      setError(
+        "Vui lòng tải lên ít nhất một hình ảnh (최소 한 개 이상의 이미지를 업로드해주세요)."
+      );
       return false;
     }
 

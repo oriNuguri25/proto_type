@@ -16,7 +16,9 @@ export const useImageUpload = () => {
 
     // 최대 5개 파일 제한
     if (imageFiles.length + files.length > 5) {
-      setError("Chỉ được tải lên tối đa 5 hình ảnh.");
+      setError(
+        "Chỉ được tải lên tối đa 5 hình ảnh (최대 5개의 이미지만 업로드할 수 있습니다)."
+      );
       return;
     }
 
@@ -72,7 +74,12 @@ export const useImageUpload = () => {
   };
 
   const uploadImages = async () => {
-    if (imageFiles.length === 0) return [];
+    if (imageFiles.length === 0) {
+      setImageError(
+        "Vui lòng tải lên ít nhất một hình ảnh (최소 한 개 이상의 이미지를 업로드해주세요)."
+      );
+      return [];
+    }
 
     try {
       console.log("이미지 업로드 시작:", imageFiles.length, "개 파일");
@@ -157,6 +164,7 @@ export const useImageUpload = () => {
       }
     } catch (error) {
       console.error("이미지 업로드 오류:", error.message);
+      setImageError(error.message || "이미지 업로드 중 오류가 발생했습니다");
       throw error;
     }
   };
@@ -172,10 +180,25 @@ export const useImageUpload = () => {
   };
 
   const validateImages = () => {
+    // 이미지 유효성 검사 강화
     if (imageFiles.length === 0) {
-      setImageError("Vui lòng tải lên ít nhất một hình ảnh.");
+      setImageError(
+        "Vui lòng tải lên ít nhất một hình ảnh (최소 한 개 이상의 이미지를 업로드해주세요)."
+      );
       return false;
     }
+
+    // 모든 이미지 파일 유효성 검사
+    const invalidImages = imageFiles.filter(
+      (file) => !file.type.startsWith("image/")
+    );
+    if (invalidImages.length > 0) {
+      setImageError(
+        "Chỉ được tải lên tệp hình ảnh (이미지 파일만 업로드할 수 있습니다)."
+      );
+      return false;
+    }
+
     return true;
   };
 
