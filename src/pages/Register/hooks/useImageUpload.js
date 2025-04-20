@@ -60,27 +60,32 @@ export const useImageUpload = () => {
     try {
       console.log("이미지 업로드 시작:", imageFiles.length, "개 파일");
 
+      // 이미지를 Base64로 변환
+      const base64Images = [];
+      for (const file of imageFiles) {
+        const base64 = await convertToBase64(file);
+        base64Images.push(base64);
+      }
+
       const token = getToken();
       if (!token) throw new Error("로그인이 필요합니다");
 
-      // FormData 생성
-      const formData = new FormData();
-      imageFiles.forEach((file) => {
-        formData.append("images", file);
-      });
+      // 로그인 제출 방식과 동일하게 환경에 따라 기본 URL 설정
+      const apiUrl = import.meta.env.DEV
+        ? "http://localhost:5173"
+        : "https://jeogi.vercel.app";
 
-      // 프록시를 통해 요청하도록 상대 경로 사용
-      const apiUrl = "/api/upload-product-images";
-      console.log(`이미지 업로드 요청 URL: ${apiUrl}`);
+      console.log(`이미지 업로드 요청 URL: ${apiUrl}/api/upload-base64-images`);
 
-      // API 요청 보내기
-      const response = await fetch(apiUrl, {
+      // Base64 이미지 업로드 요청
+      const response = await fetch(`${apiUrl}/api/upload-base64-images`, {
         method: "POST",
         headers: {
+          "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: formData,
-        credentials: "include", // 쿠키를 포함시켜 CORS 요청 처리
+        body: JSON.stringify({ images: base64Images }),
+        credentials: "include",
       });
 
       console.log("서버 응답 상태:", response.status, response.statusText);
@@ -137,6 +142,16 @@ export const useImageUpload = () => {
       console.error("이미지 업로드 오류:", error.message);
       throw error;
     }
+  };
+
+  // 파일을 Base64로 변환하는 함수
+  const convertToBase64 = (file) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = (error) => reject(error);
+    });
   };
 
   const validateImages = () => {

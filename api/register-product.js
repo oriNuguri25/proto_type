@@ -1,5 +1,4 @@
 import { createClient } from "@supabase/supabase-js";
-import { buffer } from "micro";
 
 export const config = {
   api: {
@@ -33,7 +32,7 @@ const getUserIdFromToken = (token) => {
     const payload = token.split(".")[1];
     const decodedPayload = Buffer.from(payload, "base64").toString();
     const userData = JSON.parse(decodedPayload);
-    return userData.id;
+    return userData.sub || userData.id;
   } catch (error) {
     console.error("토큰 파싱 오류:", error);
     return null;
@@ -41,32 +40,53 @@ const getUserIdFromToken = (token) => {
 };
 
 export default async function handler(req, res) {
+  const origin = req.headers.origin;
+  const allowedOrigins = ["http://localhost:5173", "https://jeogi.vercel.app"];
+
+  if (allowedOrigins.includes(origin)) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+  } else {
+    res.setHeader("Access-Control-Allow-Origin", allowedOrigins[0]);
+  }
+
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  res.setHeader("Access-Control-Allow-Credentials", "true");
+
+  if (req.method === "OPTIONS") {
+    return res.status(200).end();
+  }
+
   if (req.method !== "POST") {
-    return res
-      .status(405)
-      .json({ success: false, message: "허용되지 않는 메서드입니다" });
+    return res.status(405).json({
+      success: false,
+      message: "허용되지 않는 메서드입니다",
+    });
   }
 
   try {
     const token = req.headers.authorization;
     if (!token) {
-      return res
-        .status(401)
-        .json({ success: false, message: "인증 정보가 필요합니다" });
+      return res.status(401).json({
+        success: false,
+        message: "인증 정보가 필요합니다",
+      });
     }
 
     const userId = getUserIdFromToken(token);
     if (!userId) {
-      return res
-        .status(401)
-        .json({ success: false, message: "유효하지 않은 인증 토큰입니다" });
+      return res.status(401).json({
+        success: false,
+        message: "유효하지 않은 인증 토큰입니다",
+      });
     }
 
-    const rawBody = await buffer(req);
-    const bodyString = rawBody.toString();
-    const productData = JSON.parse(bodyString);
+    const productData = req.body;
+    console.log("요청 데이터:", productData);
 
-    let product_name = productData.title || productData.product_name;
+    if (productData.title && !productData.product_name) {
+      productData.product_name = productData.title;
+    }
 
     const requiredFields = [
       "product_name",
@@ -74,10 +94,6 @@ export default async function handler(req, res) {
       "price",
       "image_urls",
     ];
-
-    if (productData.title && !productData.product_name) {
-      productData.product_name = productData.title;
-    }
 
     const missingFields = requiredFields.filter((field) => !productData[field]);
 
@@ -110,11 +126,15 @@ export default async function handler(req, res) {
       product_name: productData.product_name,
       description: productData.description,
       price: Number(productData.price),
+      status: productData.status || "판매중",
+      purchase_link: productData.purchase_link || "",
       image_urls: productData.image_urls,
-      purchase_link: productData.purchase_link,
+      views: 0,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
     };
 
-    console.log("등록할 상품 데이터:", newProduct);
+    console.log("저장할 상품 데이터:", newProduct);
 
     const { data, error } = await supabase
       .from("products")

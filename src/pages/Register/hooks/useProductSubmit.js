@@ -10,31 +10,84 @@ export const useProductSubmit = (uploadImages, validateImages) => {
 
   const submitProduct = async (formData, imageUrls) => {
     const token = getToken();
-    if (!token) throw new Error("로그인이 필요합니다");
-
-    // 프록시를 통해 요청하도록 상대 경로 사용
-    const apiUrl = "/api/register-product";
-    console.log(`상품 등록 요청 URL: ${apiUrl}`);
-
-    const response = await fetch(apiUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        ...formData,
-        image_urls: imageUrls,
-      }),
-      credentials: "include",
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || "상품 등록 중 오류가 발생했습니다");
+    if (!token) {
+      console.error("토큰이 없습니다");
+      throw new Error("로그인이 필요합니다");
     }
 
-    return await response.json();
+    // 로그인 제출 방식과 동일하게 환경에 따라 기본 URL 설정
+    const apiUrl = import.meta.env.DEV
+      ? "http://localhost:5173"
+      : "https://jeogi.vercel.app";
+
+    console.log(`상품 등록 요청 URL: ${apiUrl}/api/register-product`);
+
+    // 서버가 기대하는 형식으로 데이터 가공
+    const requestData = {
+      product_name: formData.product_name,
+      description: formData.description,
+      price: parseInt(formData.price.replace(/,/g, ""), 10), // 쉼표 제거 후 숫자로 변환
+      purchase_link: formData.purchase_link,
+      image_urls: imageUrls,
+    };
+    console.log("상품 등록 요청 데이터:", requestData);
+
+    try {
+      const response = await fetch(`${apiUrl}/api/register-product`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(requestData),
+        credentials: "include",
+      });
+
+      // 응답 텍스트 먼저 가져오기
+      const responseText = await response.text();
+      console.log("상품 등록 서버 응답:", responseText);
+
+      if (!response.ok) {
+        let errorMessage = "상품 등록 중 오류가 발생했습니다";
+
+        try {
+          // 응답이 JSON인 경우에만 파싱 시도
+          if (
+            responseText.trim().startsWith("{") &&
+            responseText.trim().endsWith("}")
+          ) {
+            const errorData = JSON.parse(responseText);
+            errorMessage = errorData.error || errorData.message || errorMessage;
+            console.error("서버 오류 상세 정보:", errorData);
+          }
+        } catch (e) {
+          console.error("응답 파싱 오류:", e);
+        }
+
+        throw new Error(errorMessage);
+      }
+
+      let result;
+      try {
+        // 응답이 JSON인 경우에만 파싱 시도
+        if (
+          responseText.trim().startsWith("{") &&
+          responseText.trim().endsWith("}")
+        ) {
+          result = JSON.parse(responseText);
+        } else {
+          throw new Error("서버 응답이 유효한 JSON 형식이 아닙니다");
+        }
+      } catch (error) {
+        console.error("응답 파싱 오류:", error);
+        throw new Error("서버 응답을 처리하는 중 오류가 발생했습니다");
+      }
+
+      return result;
+    } catch (error) {
+      console.error("상품 등록 API 호출 오류:", error);
+      throw error;
+    }
   };
 
   const handleSubmit = async (e, formData) => {
